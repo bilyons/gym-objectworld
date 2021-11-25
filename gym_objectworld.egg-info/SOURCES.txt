@@ -1,0 +1,7 @@
+README.md
+setup.py
+gym_objectworld.egg-info/PKG-INFO
+gym_objectworld.egg-info/SOURCES.txt
+gym_objectworld.egg-info/dependency_links.txt
+gym_objectworld.egg-info/requires.txt
+gym_objectworld.egg-info/top_level.txt
