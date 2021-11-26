@@ -14,10 +14,12 @@ RIGHT = 2
 UP = 3
 
 def generate_map(size, n_rewards):
-
-	if n_rewards == 2:
+	if n_rewards == 1:
 		res = np.random.choice([" "], ((size, size)), p=[1])
-		res[0][math.ceil(size/2)-1] = "S"
+		res[-1][-1] = "G"
+		return ["".join(x) for x in res]
+	elif n_rewards == 2:
+		res = np.random.choice([" "], ((size, size)), p=[1])
 		res[-1][-1] = "G"
 		res[-1][0] = "g"
 		return ["".join(x) for x in res]
@@ -29,20 +31,21 @@ def generate_map(size, n_rewards):
 class GridWorldEnv(discrete.DiscreteEnv):
 	metadata={'render.modes': ['human', 'ansi']}
 
-	def __init__(self, size=5, p_slip = 0.3, n_rewards = 2):
+	def __init__(self, size=5, p_slip = 0.3, n_rewards = 1):
 		self.viewer = None
 
 		desc = generate_map(size, n_rewards)
 
 		self.desc = desc = np.asarray(desc, dtype="c")
 		self.nrow, self.ncol = nrow, ncol = desc.shape
+		self.p_slip = p_slip
 
 		self.reward_range = (0,1)
 
 		nA = 4
 		nS = nrow*ncol
 
-		isd = np.array(desc == b"S").astype("float64").ravel()
+		isd = np.ones(nrow*ncol)
 		isd /= isd.sum()
 
 		P = {s: {a: [] for a in range(nA)} for s in range(nS)}
@@ -85,12 +88,15 @@ class GridWorldEnv(discrete.DiscreteEnv):
 						# exit()
 					else:
 						if p_slip>0:
-							for b in [(a - 1) % 4, a, (a + 1) % 4]:
+							for b in [(a - 1) % 4, (a + 1) % 4, (a+2)%4]:
 								li.append(
-									(1.0 / 3.0, *update_probability_matrix(row, col, b))
+									(self.p_slip/4, *update_probability_matrix(row, col, b))
 								)
+							li.append(
+								(1-self.p_slip + self.p_slip/4, *update_probability_matrix(row, col, a))
+							)
 						else:
-							li.append((1.0, *update_probability_matrix(row, col, a)))
+							li.append(1.0, *update_probability_matrix(row, col, a))
 
 		super().__init__(nS, nA, P, isd)
 
