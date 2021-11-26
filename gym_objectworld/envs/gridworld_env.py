@@ -45,7 +45,8 @@ class GridWorldEnv(discrete.DiscreteEnv):
 		nA = 4
 		nS = nrow*ncol
 
-		isd = np.ones(nrow*ncol)
+		isd = np.zeros(nrow*ncol)
+		isd[0]=1.0
 		isd /= isd.sum()
 
 		P = {s: {a: [] for a in range(nA)} for s in range(nS)}
@@ -97,7 +98,6 @@ class GridWorldEnv(discrete.DiscreteEnv):
 							)
 						else:
 							li.append(1.0, *update_probability_matrix(row, col, a))
-
 		super().__init__(nS, nA, P, isd)
 
 
