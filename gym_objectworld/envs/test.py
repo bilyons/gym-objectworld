@@ -2,13 +2,14 @@ import gym
 from scipy.special import softmax
 import numpy as np
 import matplotlib.pyplot as plt
-env = gym.make('gym_objectworld:objectworld-gridworld-v0', size = 10, p_slip=0.01)
+from .solvers import value_iteration as V
 
-print()
+env = gym.make('gym_objectworld:objectworld-gridworld-v0', size = 10, p_slip=0.01)
+np.set_printoptions(suppress=True, precision=5)
 
 ALPHA = 0.1
 GAMMA = 0.95
-EPISODE = 100000
+EPISODE = 4000
 EPSILON = 0.7
 MIN_EPSILON = 0.1
 DECAY_RATE = 0.9995
@@ -25,6 +26,20 @@ def choose_action(state):
 		action = np.random.choice(env.action_space.n, p=prob)
 	return action
 
+def policy_eval(env, Q):
+	pol = np.zeros((env.observation_space.n, env.action_space.n))
+	for s in range(env.observation_space.n):
+		prob = softmax(Q[s,:]/TAU)
+		pol[s,:] = prob
+	return pol
+
+print(env.P[0][3][0][0])
+
+V.convert_transition_array(env)
+
+exit()
+
+# Train Expert
 episode_rewards = []
 time = []
 for episode in range(EPISODE):
@@ -69,7 +84,8 @@ for episode in range(EPISODE):
 	# 	print(episode)
 	# 	exit()
 
-print(Q)
+print(policy_eval(env,Q))
+
 
 env.close()
 
@@ -78,7 +94,7 @@ plt.title("steps/Episode Length")
 plt.bar(range(len(time)), time, alpha=0.6, color='red', width=5)
 plt.show()
 
-plt.figure(figsize=(12,5))
-plt.title("Episode Reward")
-plt.bar(range(len(episode_rewards)), episode_rewards, alpha=0.6, color='blue', width=5)
-plt.show()
+# plt.figure(figsize=(12,5))
+# plt.title("Episode Reward")
+# plt.bar(range(len(episode_rewards)), episode_rewards, alpha=0.6, color='blue', width=5)
+# plt.show()
