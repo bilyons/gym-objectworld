@@ -4,8 +4,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 from solvers import value_iteration as V
 from utilities import trajectory as T
+import plot as P
 
-env = gym.make('gym_objectworld:objectworld-gridworld-v0', size = 10, p_slip=0.01)
+env = gym.make('gym_objectworld:objectworld-gridworld-v0', size = 5, p_slip=0.01, n_rewards=2)
 np.set_printoptions(suppress=True, precision=5)
 
 ALPHA = 0.1
@@ -36,13 +37,31 @@ def policy_eval(env, Q):
 
 reward = np.zeros((env.observation_space.n))
 reward[-1] = 10.0
+reward[20] = 10.0
 
 POL = V.find_policy(env, reward, GAMMA)
-
-ts= list(T.generate_trajectories(1000, env, POL))
-
+style = {
+	'border': {'color': 'red', 'linewidth': 0.5},
+}
+print(POL)
+ax = plt.figure(num='After training').add_subplot(111)
+P.plot_stochastic_policy(ax, env, POL, **style)
+plt.show()
+ts= list(T.generate_trajectories(10000, env, POL))
+T.check_terminal_ratio(ts)
 tot, tot1 = T.in_out_calc_it_all_about(env, ts)
 
-print(tot1/1000)
+# print(tot1[0][0])
+# print(tot1[0][0][1])
 
-x1 = np.arange(10)
+# print(tot1)
+
+# # # print(np.diff(tot1.reshape((10,10, 2))))
+
+x1 = np.arange(5)
+x2 = np.arange(5)
+u = tot1[:,:,0]/1000
+v = tot1[:,:,1]/1000
+
+plt.quiver(x1,x2, u,v)
+plt.show()

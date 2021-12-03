@@ -46,7 +46,7 @@ class GridWorldEnv(discrete.DiscreteEnv):
 		nS = nrow*ncol
 
 		isd = np.zeros(nrow*ncol)
-		isd[0]=1.0
+		isd[2]=1.0
 		isd /= isd.sum()
 
 		P = {s: {a: [] for a in range(nA)} for s in range(nS)}
@@ -73,7 +73,7 @@ class GridWorldEnv(discrete.DiscreteEnv):
 			if newletter == b"G":
 				reward = 1.0
 			elif newletter == b"g":
-				reward = 0.5
+				reward = 1.0
 			else:
 				reward = 0.0
 			return newstate, reward, done

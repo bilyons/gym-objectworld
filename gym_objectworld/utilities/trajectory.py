@@ -68,6 +68,8 @@ def generate_trajectory(env, policy):
 
     done = False
     state = env.reset()
+    check = 0
+    check2 = 0
     while not done:
 
         action = np.random.choice(range(env.action_space.n), p=policy[state,:])
@@ -86,34 +88,53 @@ def generate_trajectories(n, world, policy):
         return generate_trajectory(world, policy)
 
     return (_generate_one() for _ in range(n))
+def check_terminal_ratio(trajectories):
+    t1 = 0
+    t2 = 0
+    for t in trajectories:
+        if t.transitions()[-1][2] == 24:
+            t1+=1
+        else:
+            t2+=1
+    print(t1, t2)
 
 def in_out_calc_it_all_about(env, trajectories):
     in_array = np.zeros((env.observation_space.n))
     out_array = np.zeros((env.observation_space.n))
-    other_in = np.zeros((env.observation_space.n, 2))
-    other_out = np.zeros((env.observation_space.n, 2))
+
+    size = np.int(np.sqrt(env.observation_space.n))
+    other_in = np.zeros((size, size,2))
+    other_out = np.zeros((size, size,2))
     for t in trajectories:
         for i in range(len(t.transitions())):
             in_array[t.transitions()[i][2]] += 1
             out_array[t.transitions()[i][0]] += 1
+            # print(t.transitions()[i][2])
+            # print(t.transitions()[i][2]%size, t.transitions()[i][2]//size)
             if np.abs(t.transitions()[i][2] - t.transitions()[i][0]) > 1:
+                x, y = t.transitions()[i][2]%size, t.transitions()[i][2]//size
                 if np.abs(t.transitions()[i][2] - t.transitions()[i][0]) < 0:
-                    other_in[t.transitions()[i][2],:] += [0,-1]
+                    other_in[y, x,:] += [0,-1]
                 else:
-                    other_in[t.transitions()[i][2],:] += [0,1]
+                    other_in[y, x,:] += [0,1]
             else:
+                x, y = t.transitions()[i][2]%size, t.transitions()[i][2]//size
                 if np.abs(t.transitions()[i][2] - t.transitions()[i][0]) < 0:
-                    other_in[t.transitions()[i][2],:] += [-1,0]
+                    other_in[y, x,:] += [-1,0]
                 else:
-                    other_in[t.transitions()[i][2],:] += [1,0]
+                    other_in[y, x,:] += [1,0]
+
             if np.abs(t.transitions()[i][0] - t.transitions()[i][2]) > 1:
+                x, y = t.transitions()[i][0]%size, t.transitions()[i][0]//size
                 if np.abs(t.transitions()[i][0] - t.transitions()[i][2]) < 0:
-                    other_out[t.transitions()[i][0],:] += [0,-1]
+                    other_out[y, x,:] += [0,-1]
                 else:
-                    other_out[t.transitions()[i][0],:] += [0,1]
+                    other_out[y, x,:] += [0,1]
             else:
+                x, y = t.transitions()[i][0]%size, t.transitions()[i][0]//size
                 if np.abs(t.transitions()[i][0] - t.transitions()[i][2]) < 0:
-                    other_out[t.transitions()[i][0],:] += [-1,0]
+                    other_out[y, x,:] += [-1,0]
                 else:
-                    other_out[t.transitions()[i][0],:] += [1,0]
+                    other_out[y, x,:] += [1,0]
+
     return in_array - out_array, other_in-other_out
