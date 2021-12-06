@@ -45,8 +45,12 @@ class GridWorldEnv(discrete.DiscreteEnv):
 		nA = 4
 		nS = nrow*ncol
 
-		isd = np.zeros(nrow*ncol)
-		isd[2]=1.0
+		if n_rewards == 2:
+			isd = np.zeros(nrow*ncol)
+			isd[np.int(size/2)]=1.0
+		else:
+			isd = np.zeros(nrow*ncol)
+			isd[0]=1.0	
 		isd /= isd.sum()
 
 		P = {s: {a: [] for a in range(nA)} for s in range(nS)}

@@ -99,42 +99,40 @@ def check_terminal_ratio(trajectories):
     print(t1, t2)
 
 def in_out_calc_it_all_about(env, trajectories):
-    in_array = np.zeros((env.observation_space.n))
-    out_array = np.zeros((env.observation_space.n))
-
     size = np.int(np.sqrt(env.observation_space.n))
-    other_in = np.zeros((size, size,2))
-    other_out = np.zeros((size, size,2))
+    in_array = np.zeros((size, size,2))
+    out_array = np.zeros((size, size,2))
     for t in trajectories:
         for i in range(len(t.transitions())):
-            in_array[t.transitions()[i][2]] += 1
-            out_array[t.transitions()[i][0]] += 1
-            # print(t.transitions()[i][2])
-            # print(t.transitions()[i][2]%size, t.transitions()[i][2]//size)
-            if np.abs(t.transitions()[i][2] - t.transitions()[i][0]) > 1:
-                x, y = t.transitions()[i][2]%size, t.transitions()[i][2]//size
-                if np.abs(t.transitions()[i][2] - t.transitions()[i][0]) < 0:
-                    other_in[y, x,:] += [0,-1]
-                else:
-                    other_in[y, x,:] += [0,1]
-            else:
-                x, y = t.transitions()[i][2]%size, t.transitions()[i][2]//size
-                if np.abs(t.transitions()[i][2] - t.transitions()[i][0]) < 0:
-                    other_in[y, x,:] += [-1,0]
-                else:
-                    other_in[y, x,:] += [1,0]
 
-            if np.abs(t.transitions()[i][0] - t.transitions()[i][2]) > 1:
-                x, y = t.transitions()[i][0]%size, t.transitions()[i][0]//size
-                if np.abs(t.transitions()[i][0] - t.transitions()[i][2]) < 0:
-                    other_out[y, x,:] += [0,-1]
+            old_x, old_y = t.transitions()[i][0]%size, t.transitions()[i][0]//size
+            new_x, new_y = t.transitions()[i][2]%size, t.transitions()[i][2]//size
+            # Did I go right or up?
+            if t.transitions()[i][2] - t.transitions()[i][0] >= 1:
+                # Did I go right?
+                if new_x>old_x:
+                    out_array[old_y, old_x,:] +=[1, 0]
+                    in_array[new_y, new_x,:] += [-1,0]
+                elif new_y> old_y:
+                    out_array[old_y, old_x,:] +=[0, 1]
+                    in_array[new_y, new_x,:] += [0,-1]
                 else:
-                    other_out[y, x,:] += [0,1]
-            else:
-                x, y = t.transitions()[i][0]%size, t.transitions()[i][0]//size
-                if np.abs(t.transitions()[i][0] - t.transitions()[i][2]) < 0:
-                    other_out[y, x,:] += [-1,0]
+                    print((new_x, new_y), (old_x, old_y))
+                    print(new_y>old_y)
+                    print(new_x>old_x)
+                    exit()             
+            elif t.transitions()[i][2] - t.transitions()[i][0] <= -1:
+                # Did I go left?
+                if new_x< old_x:
+                    out_array[old_y, old_x,:] +=[-1,0]
+                    in_array[new_y, new_x,:] += [1, 0]
+                elif new_y< old_y:
+                    out_array[old_y, old_x,:] +=[0,-1]
+                    in_array[new_y, new_x,:] += [0, 1]
                 else:
-                    other_out[y, x,:] += [1,0]
+                    print((new_x, new_y), (old_x, old_y))
+                    print(new_y<old_y)
+                    print(new_x<old_x)
+                    exit()  
 
-    return in_array - out_array, other_in-other_out
+    return in_array - out_array, out_array#-in_array
