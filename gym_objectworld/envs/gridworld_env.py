@@ -47,6 +47,7 @@ class GridWorldEnv(discrete.DiscreteEnv):
 
 		if n_rewards == 2:
 			isd = np.zeros(nrow*ncol)
+			# print(np.ceil(size/2, dtype=np.int64))
 			isd[np.int(size/2)]=1.0
 		else:
 			isd = np.zeros(nrow*ncol)

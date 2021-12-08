@@ -6,7 +6,7 @@ from solvers import value_iteration as V
 from utilities import trajectory as T
 import plot as P
 
-env = gym.make('gym_objectworld:objectworld-gridworld-v0', size = 9, p_slip=0.000000001, n_rewards=1)
+env = gym.make('gym_objectworld:objectworld-gridworld-v0', size = 9, p_slip=0.000000001, n_rewards=2)
 np.set_printoptions(suppress=True, precision=5)
 
 ALPHA = 0.1
@@ -37,7 +37,8 @@ def policy_eval(env, Q):
 
 reward = np.zeros((env.observation_space.n))
 reward[-1] = 10.0
-# reward[72] = 10.0
+reward[72] = 10.0
+
 
 POL = V.find_policy(env, reward, GAMMA)
 style = {
@@ -47,7 +48,10 @@ print(POL)
 # ax = plt.figure(num='After training').add_subplot(111)
 # P.plot_stochastic_policy(ax, env, POL, **style)
 # plt.show()
-ts= list(T.generate_trajectories(3, env, POL))
+ts= list(T.generate_trajectories(3000, env, POL))
+
+print(ts[0])
+# exit()
 T.check_terminal_ratio(ts)
 tot, tot1 = T.in_out_calc_it_all_about(env, ts)
 

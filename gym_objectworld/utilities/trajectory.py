@@ -92,7 +92,7 @@ def check_terminal_ratio(trajectories):
     t1 = 0
     t2 = 0
     for t in trajectories:
-        if t.transitions()[-1][2] == 24:
+        if t.transitions()[-1][2] == 80:
             t1+=1
         else:
             t2+=1
