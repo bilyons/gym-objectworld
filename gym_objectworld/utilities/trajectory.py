@@ -98,41 +98,38 @@ def check_terminal_ratio(trajectories):
             t2+=1
     print(t1, t2)
 
-def in_out_calc_it_all_about(env, trajectories):
+def movement_calc(env, trajectories):
     size = np.int(np.sqrt(env.observation_space.n))
-    in_array = np.zeros((size, size,2))
-    out_array = np.zeros((size, size,2))
+    in_array = np.zeros((size, size, env.action_space.n))
+    out_array = np.zeros((size, size, env.action_space.n))
+
     for t in trajectories:
         for i in range(len(t.transitions())):
 
             old_x, old_y = t.transitions()[i][0]%size, t.transitions()[i][0]//size
             new_x, new_y = t.transitions()[i][2]%size, t.transitions()[i][2]//size
-            # Did I go right or up?
-            if t.transitions()[i][2] - t.transitions()[i][0] >= 1:
-                # Did I go right?
-                if new_x>old_x:
-                    out_array[old_y, old_x,:] +=[1, 0]
-                    in_array[new_y, new_x,:] += [-1,0]
-                elif new_y> old_y:
-                    out_array[old_y, old_x,:] +=[0, 1]
-                    in_array[new_y, new_x,:] += [0,-1]
-                else:
-                    print((new_x, new_y), (old_x, old_y))
-                    print(new_y>old_y)
-                    print(new_x>old_x)
-                    exit()             
-            elif t.transitions()[i][2] - t.transitions()[i][0] <= -1:
-                # Did I go left?
-                if new_x< old_x:
-                    out_array[old_y, old_x,:] +=[-1,0]
-                    in_array[new_y, new_x,:] += [1, 0]
-                elif new_y< old_y:
-                    out_array[old_y, old_x,:] +=[0,-1]
-                    in_array[new_y, new_x,:] += [0, 1]
-                else:
-                    print((new_x, new_y), (old_x, old_y))
-                    print(new_y<old_y)
-                    print(new_x<old_x)
-                    exit()  
+            if t.transitions()[i][2] - t.transitions()[i][0] == size:
+                # I went up
+                out_array[old_y, old_x,:] +=[0,0,0,1]
+                in_array[new_y, new_x,:] += [0,1,0,0]                
 
+            elif t.transitions()[i][2] - t.transitions()[i][0] == -size:
+                # I went down
+                out_array[old_y, old_x,:] +=[0,1,0,0]
+                in_array[new_y, new_x,:] += [0,0,0,1]
+            elif t.transitions()[i][2] - t.transitions()[i][0] == 1:
+                # I went right
+                out_array[old_y, old_x,:] +=[0,0,1,0]
+                in_array[new_y, new_x,:] += [1,0,0,0]
+            elif t.transitions()[i][2] - t.transitions()[i][0] == -1:
+                # I went left
+                out_array[old_y, old_x,:] +=[1,0,0,0]
+                in_array[new_y, new_x,:] += [0,0,1,0]
+            elif t.transitions()[i][2] - t.transitions()[i][0] == 0:
+                # I went nowhere
+                out_array[old_y, old_x,:] +=[0,0,0,0]
+                in_array[new_y, new_x,:] += [0,0,0,0]
+            else:
+                print("Movement error")
+                exit()
     return in_array - out_array, out_array#-in_array

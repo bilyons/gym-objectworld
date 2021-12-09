@@ -31,7 +31,7 @@ def generate_map(size, n_rewards):
 class GridWorldEnv(discrete.DiscreteEnv):
 	metadata={'render.modes': ['human', 'ansi']}
 
-	def __init__(self, size=5, p_slip = 0.3, n_rewards = 1):
+	def __init__(self, size=5, p_slip = 0.3, n_rewards = 1, rand=False):
 		self.viewer = None
 
 		desc = generate_map(size, n_rewards)
@@ -46,12 +46,17 @@ class GridWorldEnv(discrete.DiscreteEnv):
 		nS = nrow*ncol
 
 		if n_rewards == 2:
-			isd = np.zeros(nrow*ncol)
-			# print(np.ceil(size/2, dtype=np.int64))
-			isd[np.int(size/2)]=1.0
+			if rand==False:
+				isd = np.zeros(nrow*ncol)
+				isd[np.int(size/2)]=1.0
+			else:
+				isd = np.ones(nrow*ncol)
 		else:
-			isd = np.zeros(nrow*ncol)
-			isd[0]=1.0	
+			if rand==False:
+				isd = np.zeros(nrow*ncol)
+				isd[0]=1.0	
+			else:
+				isd = np.ones(nrow*ncol)
 		isd /= isd.sum()
 
 		P = {s: {a: [] for a in range(nA)} for s in range(nS)}

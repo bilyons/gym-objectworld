@@ -72,7 +72,7 @@ def plot_transition_probabilities(ax, world, border=None, **kwargs):
 	return p
 
 
-def plot_state_values(ax, world, values, border, **kwargs):
+def plot_state_values(ax, env, values, border, **kwargs):
 	"""
 	Plot the given state values of a GridWorld instance.
 	Args:
@@ -86,19 +86,21 @@ def plot_state_values(ax, world, values, border, **kwargs):
 		All further key-value arguments will be forwarded to
 		`pyplot.imshow`.
 	"""
-	if is_square(world.n_states):
+	size = np.int(np.sqrt(env.observation_space.n))
+	if is_square(env.observation_space.n):
 		p = ax.imshow(np.reshape(values, (size, size)), origin='lower', **kwargs)
 	else:
 		p = ax.imshow(np.reshape(values, (1, size)), origin='lower', **kwargs)
 
+	print(values)
 	if border is not None:
-		if is_square(world.n_states):
+		if is_square(env.observation_space.n):
 			for i in range(0, size + 1):
 				ax.plot([i - 0.5, i - 0.5], [-0.5, size - 0.5], **border, label=None)
 				ax.plot([-0.5, size - 0.5], [i - 0.5, i - 0.5], **border, label=None)
 				for x in range(size):
 					for y in range(size):
-						plt.text(x,y, '%.2f' % values[x+5*y],
+						plt.text(x,y, '%.2f' % values[y,x],
 							 horizontalalignment='center',
 							 verticalalignment='center',
 							 )
