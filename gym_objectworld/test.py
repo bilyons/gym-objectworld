@@ -2,6 +2,7 @@ import gym
 from scipy.special import softmax
 import numpy as np
 import matplotlib.pyplot as plt
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 from solvers import value_iteration as V
 from utilities import trajectory as T
 import plot as P
@@ -42,10 +43,23 @@ def divergence_calc(array):
 	# for a in range(action_size):
 	return div_array
 
+def divergence(f, h):
+	num_dims = len(f)
+	return np.ufunc.reduce(np.add, [np.gradient(f[i], h[i],axis=i) for i in range(num_dims)])
+
 reward = np.zeros((env.observation_space.n))
 reward[-1] = 10.0
 reward[72] = 10.0
 
+NY = 9
+NX = NY
+ymin = 0
+ymax = 9
+xmin = 0
+xmax = 9
+dx = (xmax -xmin)/(NX-1.)
+dy = (ymax -ymin)/(NY-1.)
+h=[dx,dy]
 
 POL = V.find_policy(env, reward, GAMMA)
 style = {
@@ -57,10 +71,57 @@ ts= list(T.generate_trajectories(3000, env, POL))
 
 T.check_terminal_ratio(ts)
 
-tot, tot1 = T.movement_calc(env, ts)
-# print(tot1)
-# print(np.gradient(tot1))
-# exit()
+tot, tot1, tot2 = T.vector_field(env,ts)
+print(tot1)
+
+size = np.int(np.sqrt(env.observation_space.n))
+
+x = np.linspace(0, size-1, size, dtype=np.int64)
+y = np.linspace(0, size-1, size, dtype=np.int64)
+
+xx,yy = np.meshgrid(x,y)
+zz = xx+size*yy
+
+Fx = tot[xx+yy*size, 1]
+Fy = tot[xx+yy*size, 0]
+
+Fx1 = tot1[xx+yy*size, 1]
+Fy1 = tot1[xx+yy*size, 0]
+
+Fx2 = tot2[xx+yy*size, 1]
+Fy2 = tot2[xx+yy*size, 0]
+
+F= [Fx, Fy]
+g = divergence(F, h)
+g/=3000
+rows=1
+cols=3
+# g = divergence(F,h)
+ax = plt.subplot(rows,cols,1,aspect='equal',title='div numerical outward moves')
+#im=plt.pcolormesh(x, y, g)
+im = plt.pcolormesh(x, y, g, shading='nearest', cmap=plt.cm.get_cmap('coolwarm'))
+plt.quiver(x,y,Fy,Fx)
+divider = make_axes_locatable(ax)
+cax = divider.append_axes("right", size="5%", pad=0.05)
+cbar = plt.colorbar(im, cax = cax,format='%.1f')
+
+ax = plt.subplot(rows,cols,2,aspect='equal',title='div numerical inward moves')
+#im=plt.pcolormesh(x, y, g)
+im = plt.pcolormesh(x, y, g, shading='nearest', cmap=plt.cm.get_cmap('coolwarm'))
+plt.quiver(x,y,Fy1,Fx1)
+divider = make_axes_locatable(ax)
+cax = divider.append_axes("right", size="5%", pad=0.05)
+cbar = plt.colorbar(im, cax = cax,format='%.1f')
+
+ax = plt.subplot(rows,cols,3,aspect='equal',title='div numerical outward-inward moves')
+#im=plt.pcolormesh(x, y, g)
+im = plt.pcolormesh(x, y, g, shading='nearest', cmap=plt.cm.get_cmap('coolwarm'))
+plt.quiver(x,y,Fy2,Fx2)
+divider = make_axes_locatable(ax)
+cax = divider.append_axes("right", size="5%", pad=0.05)
+cbar = plt.colorbar(im, cax = cax,format='%.1f')
+plt.show()
+exit()
 
 print(tot1)
 
