@@ -311,7 +311,8 @@ class Grid:
         key = (agent_dir, highlight, tile_size)
         key = obj.encode() + key if obj else key
 
-        print(key)
+        print(tile_size)
+        exit()
         if key in cls.tile_cache:
             return cls.tile_cache[key]
 

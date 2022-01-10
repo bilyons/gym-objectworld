@@ -97,6 +97,9 @@ class WorldObject:
 			assert False, "unknown object"
 		return v
 
+	def __str__(self):
+		return "<{} (In: {}) (Out: {})>".format(self.type, self.colour1, self.colour2)
+
 class Floor(WorldObject):
 	"""
 	Walkable floor tile
@@ -135,7 +138,7 @@ class OWObject(WorldObject):
 	"""
 
 	def __init__(self, colour1, colour2):
-		super().__init__('object', colour1, colour2)
+		super().__init__('object', INDEX_TO_COLOUR[colour1], INDEX_TO_COLOUR[colour2])
 
 	def can_overlap(self):
 		return True
@@ -264,7 +267,6 @@ class Grid:
 		Render a tile and cache the result
 		"""
 		# Hash map lookup key for the cache
-		print(obj)
 		key=(agent_here, tile_size)
 		key = obj.encode() + key if obj else key
 
@@ -313,10 +315,7 @@ class Grid:
 		for j in range(0, self.height):
 			for i in range(0, self.width):
 				cell = self.get(i, j)
-				print(cell)
-				print(tile_size)
 				agent_here = np.array_equal(agent_pos, (i, j))
-				print(agent_here)
 				tile_img = Grid.render_tile(
 					cell,
 					agent_here=agent_here if agent_here else None,
@@ -390,15 +389,14 @@ class MiniGridEnv(gym.Env):
 		left = 0
 		right = 1
 		forward = 2
-
-		# Done completing task
-		done = 6
+		back = 3
+		stay = 4
 
 	def __init__(
 		self,
 		grid_size=None,
-		max_steps=100,
-		seed=1337
+		p_slip = 0.0,
+		max_steps=100
 	):
 
 		# Action enumeration for this environment
@@ -408,7 +406,7 @@ class MiniGridEnv(gym.Env):
 		self.action_space = spaces.Discrete(len(self.actions))
 
 		# Range of possible rewards
-		self.reward_range = (0, 1)
+		self.reward_range = (-1, 1)
 
 		# Window to use for human rendering mode
 		self.window = None
@@ -418,12 +416,10 @@ class MiniGridEnv(gym.Env):
 		self.width = grid_size
 		self.height = grid_size
 		self.max_steps = max_steps
+		self.p_slip = p_slip
 
 		# Current position and direction of the agent
 		self.agent_pos = None
-
-		# Initialize the RNG
-		self.seed(seed=seed)
 
 		# Initialize the state
 		self.reset()
@@ -449,12 +445,6 @@ class MiniGridEnv(gym.Env):
 
 		# Step count since episode start
 		self.step_count = 0
-
-
-	def seed(self, seed=1337):
-		# Seed the random number generator
-		self.np_random, _ = seeding.np_random(seed)
-		return [seed]
 
 	def hash(self, size=16):
 		"""Compute a hash that uniquely identifies the current state of the environment.
@@ -483,12 +473,7 @@ class MiniGridEnv(gym.Env):
 		OBJECT_TO_STR = {
 			'wall'          : 'W',
 			'floor'         : 'F',
-			'door'          : 'D',
-			'key'           : 'K',
-			'ball'          : 'A',
-			'box'           : 'B',
-			'goal'          : 'G',
-			'lava'          : 'V',
+			'object'          : 'OW',
 		}
 
 		# Short string for opened door
@@ -536,33 +521,32 @@ class MiniGridEnv(gym.Env):
 	def _gen_grid(self, grid_size):
 		assert False, "_gen_grid needs to be implemented by each environment"
 
-	def _reward(self):
-		"""
-		Compute the reward to be given upon success
-		"""
+	def _gen_obs(self):
+		assert False, "gen_obs needs to be implemented by each environment"
 
-		return 1 - 0.9 * (self.step_count / self.max_steps)
+	def _reward(self):
+		assert False, "_reward needs to be implemented for each environment"
 
 	def _rand_int(self, low, high):
 		"""
 		Generate random integer in [low,high[
 		"""
 
-		return self.np_random.randint(low, high)
+		return np.random.randint(low, high)
 
 	def _rand_float(self, low, high):
 		"""
 		Generate random float in [low,high[
 		"""
 
-		return self.np_random.uniform(low, high)
+		return np.random.uniform(low, high)
 
 	def _rand_bool(self):
 		"""
 		Generate random boolean value
 		"""
 
-		return (self.np_random.randint(0, 2) == 0)
+		return (np.random.randint(0, 2) == 0)
 
 	def _rand_elem(self, iterable):
 		"""
@@ -603,8 +587,8 @@ class MiniGridEnv(gym.Env):
 		"""
 
 		return (
-			self.np_random.randint(xLow, xHigh),
-			self.np_random.randint(yLow, yHigh)
+			np.random.randint(xLow, xHigh),
+			np.random.randint(yLow, yHigh)
 		)
 
 	def place_obj(self,
@@ -691,68 +675,12 @@ class MiniGridEnv(gym.Env):
 
 		return pos
 
-	def get_view_coords(self, i, j):
+	def get_neighbours(self):
 		"""
-		Translate and rotate absolute grid coordinates (i, j) into the
-		agent's partially observable view (sub-grid). Note that the resulting
-		coordinates may be negative or outside of the agent's view size.
+		Get cells to left, right, up, down
 		"""
-
-		ax, ay = self.agent_pos
-		dx, dy = self.dir_vec
-		rx, ry = self.right_vec
-
-		# Compute the absolute coordinates of the top-left view corner
-		sz = self.agent_view_size
-		hs = self.agent_view_size // 2
-		tx = ax + (dx * (sz-1)) - (rx * hs)
-		ty = ay + (dy * (sz-1)) - (ry * hs)
-
-		lx = i - tx
-		ly = j - ty
-
-		# Project the coordinates of the object relative to the top-left
-		# corner onto the agent's own coordinate system
-		vx = (rx*lx + ry*ly)
-		vy = -(dx*lx + dy*ly)
-
-		return vx, vy
-
-	def relative_coords(self, x, y):
-		"""
-		Check if a grid position belongs to the agent's field of view, and returns the corresponding coordinates
-		"""
-
-		vx, vy = self.get_view_coords(x, y)
-
-		if vx < 0 or vy < 0 or vx >= self.agent_view_size or vy >= self.agent_view_size:
-			return None
-
-		return vx, vy
-
-	def in_view(self, x, y):
-		"""
-		check if a grid position is visible to the agent
-		"""
-
-		return self.relative_coords(x, y) is not None
-
-	def agent_sees(self, x, y):
-		"""
-		Check if a non-empty grid position is visible to the agent
-		"""
-
-		coordinates = self.relative_coords(x, y)
-		if coordinates is None:
-			return False
-		vx, vy = coordinates
-
-		obs = self.gen_obs()
-		obs_grid, _ = Grid.decode(obs['image'])
-		obs_cell = obs_grid.get(vx, vy)
-		world_cell = self.grid.get(x, y)
-
-		return obs_cell is not None and obs_cell.type == world_cell.type
+		print(self.agent_pos)
+		return self.agent_pos + np.array((1,0)), self.agent_pos + np.array((-1,0)), self.agent_pos + np.array((0,1)), self.agent_pos + np.array((0,-1))
 
 	def step(self, action):
 		self.step_count += 1
@@ -760,64 +688,26 @@ class MiniGridEnv(gym.Env):
 		reward = 0
 		done = False
 
-		# Get the position in front of the agent
-		fwd_pos = self.front_pos
+		# Confirm action
+		if np.random.rand() < self.p_slip:
+			action = self.action_space.sample()
 
-		# Get the contents of the cell in front of the agent
-		fwd_cell = self.grid.get(*fwd_pos)
+		# Get move pos
+		mov_pos = self.get_neighbours()[action]
 
-		# Rotate left
-		if action == self.actions.left:
-			self.agent_dir -= 1
-			if self.agent_dir < 0:
-				self.agent_dir += 4
+		# Get contents
+		mov_cell = self.grid.get(*mov_pos)
 
-		# Rotate right
-		elif action == self.actions.right:
-			self.agent_dir = (self.agent_dir + 1) % 4
+		if mov_cell == None or mov_cell.can_overlap():
+			self.agent_pos = mov_pos
+			reward = self._reward(self.agent_pos)
 
-		# Move forward
-		elif action == self.actions.forward:
-			if fwd_cell == None or fwd_cell.can_overlap():
-				self.agent_pos = fwd_pos
-			if fwd_cell != None and fwd_cell.type == 'goal':
-				done = True
-				reward = self._reward()
-			if fwd_cell != None and fwd_cell.type == 'lava':
-				done = True
-
-		# Pick up an object
-		elif action == self.actions.pickup:
-			if fwd_cell and fwd_cell.can_pickup():
-				if self.carrying is None:
-					self.carrying = fwd_cell
-					self.carrying.cur_pos = np.array([-1, -1])
-					self.grid.set(*fwd_pos, None)
-
-		# Drop an object
-		elif action == self.actions.drop:
-			if not fwd_cell and self.carrying:
-				self.grid.set(*fwd_pos, self.carrying)
-				self.carrying.cur_pos = fwd_pos
-				self.carrying = None
-
-		# Toggle/activate an object
-		elif action == self.actions.toggle:
-			if fwd_cell:
-				fwd_cell.toggle(self, fwd_pos)
-
-		# Done action (not used by default)
-		elif action == self.actions.done:
-			pass
-
-		else:
-			assert False, "unknown action"
-
-		if self.step_count >= self.max_steps:
+		if self.step_count > self.max_steps:
 			done = True
 
-		obs = self.gen_obs()
+		obs = self._gen_obs()
 
+		print(obs)
 		return obs, reward, done, {}
 
 	def render(self, mode='human', close=False, tile_size=TILE_PIXELS):
@@ -836,7 +726,6 @@ class MiniGridEnv(gym.Env):
 			self.window.show(block=False)
 
 		# Render the whole grid
-		print(self.agent_pos)
 		img = self.grid.render(
 			tile_size,
 			self.agent_pos
