@@ -127,3 +127,4 @@ class GridWorldEnv(discrete.DiscreteEnv):
 		if mode != "human":
 			with closing(outfile):
 				return outfile.getvalue()
+
