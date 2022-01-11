@@ -6,6 +6,7 @@ import numpy as np
 from gym import error, spaces, utils
 from gym.utils import seeding
 from gym_objectworld import rendering as r
+from itertools import product
 
 # Pixel size
 TILE_PIXELS = 32
@@ -146,8 +147,8 @@ class OWObject(WorldObject):
 	def render(self, img):
 		colour1 = COLOURS[self.colour1]
 		colour2 = COLOURS[self.colour2]
-		r.fill_coords(img, r.point_in_rect(0, 1, 0, 1), colour1)
-		r.fill_coords(img, r.point_in_rect(0.2, 0.8, 0.2, 0.8), colour2)
+		r.fill_coords(img, r.point_in_rect(0, 1, 0, 1), colour2)
+		r.fill_coords(img, r.point_in_rect(0.2, 0.8, 0.2, 0.8), colour1)
 
 class Grid:
 	"""
@@ -295,11 +296,7 @@ class Grid:
 
 		return img
 
-	def render(
-		self,
-		tile_size,
-		agent_pos=None
-	):
+	def render(self, tile_size,	agent_pos=None):
 		"""
 		Render this grid at a given scale
 		:param r: target renderer object
@@ -392,12 +389,7 @@ class MiniGridEnv(gym.Env):
 		back = 3
 		stay = 4
 
-	def __init__(
-		self,
-		grid_size=None,
-		p_slip = 0.0,
-		max_steps=100
-	):
+	def __init__(self, grid_size=None, p_slip = 0.0, max_steps=100):
 
 		# Action enumeration for this environment
 		self.actions = MiniGridEnv.Actions
@@ -418,11 +410,91 @@ class MiniGridEnv(gym.Env):
 		self.max_steps = max_steps
 		self.p_slip = p_slip
 
+		# Transition probability
+		self.P = {(y_i, x_i): {a: {(y_k, x_k): [] for (y_k, x_k) in product(range(1, self.grid_size-1), range(1, self.grid_size-1))}
+				for a in range(len(self.actions))}
+				for (y_i, x_i) in product(range(1, self.grid_size-1), range(1, self.grid_size-1))
+			}
+
+		# Update the probability matrix
+		for (y_i, x_i) in product(range(1, self.grid_size-1), range(1, self.grid_size-1)):
+			for a in range(len(self.actions)):
+				for (y_k, x_k) in product(range(1, self.grid_size-1), range(1, self.grid_size-1)):
+					self.P[(y_i, x_i)][a][(y_k, x_k)] = self._transition_probability((y_i, x_i), a, (y_k, x_k))
+
 		# Current position and direction of the agent
 		self.agent_pos = None
 
 		# Initialize the state
 		self.reset()
+
+
+	def _transition_probability(self, i, j, k):
+		"""
+		Get the transition probability from state i to state k given action j
+		
+		i: (y,x) coordinate pair
+		j: 0-4 integer action value
+		k: (y,x) coordinate pair
+		"""
+		# Initial state
+		i = np.array(i)
+
+		# Action array
+		neighbours = self.get_neighbours(i)
+
+		# Desired state
+		k = np.array(k)
+
+		neighbour = False
+
+		# Is it a neighbour
+		if not np.any(np.all(k == neighbours, axis=1)):
+			return 0.0
+
+		# Is it the intended move
+		if (neighbours[j] == k).all():
+			return 1 - self.p_slip + self.p_slip/len(self.actions)
+
+		# If these are not the same point, then we can move there by wind
+		if (i != k).all():
+			return self.p_slip/len(self.actions)
+
+		# If these are still not the same point, we can only attend them
+		# by moving off the grid
+		# Corners
+		corners = [np.array((1,1)), np.array((1, self.grid_size-2)), np.array((self.grid_size-2, 1)), np.array((self.grid_size-2, self.grid_size-2))]
+
+		if np.any(np.all(i == corners, axis=1)):
+			# Corner
+			# Can move off in two directions
+			# Did we intend to move off the grid?
+			if 0 in neighbours[j] or self.grid_size-1 in neighbours[j]:
+				# 3 ways to stay slip into either corner or stay
+				return 1-self.p_slip + 3*self.p_slip/len(self.actions)
+
+			else:
+				# We didn't mean to but we could blow off in two directions or stay
+				if (i == np.array((1,1))).all():
+					if j == 0:
+						if (k==np.array((1,2))).all():
+							print("It's here and its a mistake")
+				return 3*self.p_slip/len(self.actions)
+
+		else:
+			# Not a corner, is it an edge?
+			if ((0 != i[0]) or (self.grid_size-1 != i[0])) and ((0 != i[1]) or (self.grid_size-1 != i[1])):
+				# Not an edge
+				return 0.0
+
+			# Edge
+			# Can only move off the edge in one direction
+			# Did we intend to move off the grid
+			if 0 in neighbours[j] or self.grid_size-1 in neighbours[j]:
+				return 1-self.p_slip + 2*self.p_slip/len(self.actions)
+			else:
+				# Can only blow off by wind
+				return self.wind/len(self.actions)
 
 	def reset(self):
 		# Current position and direction of the agent
@@ -591,13 +663,7 @@ class MiniGridEnv(gym.Env):
 			np.random.randint(yLow, yHigh)
 		)
 
-	def place_obj(self,
-		obj,
-		top=None,
-		size=None,
-		reject_fn=None,
-		max_tries=math.inf
-	):
+	def place_obj(self, obj, top=None, size=None, reject_fn=None, max_tries=math.inf):
 		"""
 		Place an object at an empty position in the grid
 		:param top: top-left position of the rectangle where to place
@@ -675,12 +741,14 @@ class MiniGridEnv(gym.Env):
 
 		return pos
 
-	def get_neighbours(self):
+	def get_neighbours(self, state=None):
 		"""
 		Get cells to left, right, up, down
 		"""
-		print(self.agent_pos)
-		return self.agent_pos + np.array((1,0)), self.agent_pos + np.array((-1,0)), self.agent_pos + np.array((0,1)), self.agent_pos + np.array((0,-1))
+		if state is None:
+			return self.agent_pos + np.array((1,0)), self.agent_pos + np.array((-1,0)), self.agent_pos + np.array((0,1)), self.agent_pos + np.array((0,-1)), self.agent_pos
+		else:
+			return state + np.array((1,0)), state + np.array((-1,0)), state + np.array((0,1)), state + np.array((0,-1)), state
 
 	def step(self, action):
 		self.step_count += 1
@@ -707,7 +775,6 @@ class MiniGridEnv(gym.Env):
 
 		obs = self._gen_obs()
 
-		print(obs)
 		return obs, reward, done, {}
 
 	def render(self, mode='human', close=False, tile_size=TILE_PIXELS):

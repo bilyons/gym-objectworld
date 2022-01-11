@@ -6,23 +6,13 @@ class ObjectWorld(MiniGridEnv):
     Empty grid environment, no obstacles, sparse reward
     """
 
-    def __init__(
-        self,
-        grid_size,
-        n_objects,
-        n_colours,
-        p_slip,
-        agent_start_pos=None,
-    ):
+    def __init__(self, grid_size, n_objects, n_colours, p_slip, agent_start_pos=None,):
+
         self.agent_start_pos = agent_start_pos
         self.n_objects = n_objects
         self.n_colours = n_colours
 
-        super().__init__(
-            grid_size=grid_size,
-            p_slip = p_slip,
-            max_steps=4*grid_size*grid_size,
-        )
+        super().__init__(grid_size=grid_size, p_slip = p_slip, max_steps=4*grid_size*grid_size,)
 
     def _gen_grid(self, grid_size):
         # Create an empty grid
@@ -82,31 +72,35 @@ class ObjectWorld(MiniGridEnv):
             return -1
         return 0
 
-    def _gen_obs(self, discrete=True):
+    def _gen_obs(self, state=None, discrete=True):
         """
         Feature vector of the state continuous and discrete
         """
 
-        sx, sy = self.agent_pos
+        if state == None:
+            sy, sx = self.agent_pos
+        else:
+            sy, sx = state
 
         nearest_inner = {}
         nearest_outer = {}
 
-        for y in range(1, self.grid_size-1):
-            for x in range(1, self.grid_size-1):
-                if (x,y) in self.objects:
+        for x in range(1, self.grid_size-1):
+            for y in range(1, self.grid_size-1):
+                if (y,x) in self.objects:
                     dist = math.hypot((x-sx), (y-sy))
-                    obj = self.objects[(x,y)]
-                    if obj[0].colour1 in nearest_inner:
-                        if dist < nearest_inner[obj[0].colour1]:
-                            nearest_inner[obj[0].colour1] = dist
+                    obj = self.objects[(y,x)]
+                    if COLOUR_TO_INDEX[obj[0].colour1] in nearest_inner:
+                        if dist < nearest_inner[COLOUR_TO_INDEX[obj[0].colour1]]:
+                            nearest_inner[COLOUR_TO_INDEX[obj[0].colour1]] = dist
                     else:
-                        nearest_inner[obj[0].colour1] = dist
-                    if obj[0].colour2 in nearest_outer:
-                        if dist < nearest_outer[obj[0].colour2]:
-                            nearest_outer[obj[0].colour2] = dist
+                        nearest_inner[COLOUR_TO_INDEX[obj[0].colour1]] = dist
+                    if COLOUR_TO_INDEX[obj[0].colour2] in nearest_outer:
+                        if dist < nearest_outer[COLOUR_TO_INDEX[obj[0].colour2]]:
+                            nearest_outer[COLOUR_TO_INDEX[obj[0].colour2]] = dist
                     else:
-                        nearest_outer[obj[0].colour2] = dist
+                        nearest_outer[COLOUR_TO_INDEX[obj[0].colour2]] = dist
+
         # Ensure all colors are represented
         for c in range(self.n_colours):
             if c not in nearest_inner:
@@ -115,26 +109,58 @@ class ObjectWorld(MiniGridEnv):
                 nearest_outer[c] = 0
 
         if discrete:
-            state = np.zeros((2*self.n_colours*self.grid_size,))
+            state = np.zeros((2*self.n_colours*self.grid_size-2,))
             i=0
             for c in range(self.n_colours):
-                for d in range(1, self.grid_size+1):
+                for d in range(1, self.grid_size-1):
                     if nearest_inner[c] < d:
                         state[i] = 1
                     i+=1
                     if nearest_outer[c] < d:
                         state[i] = 1
                     i+=1
-            assert i==2*self.n_colours*self.grid_size
+            assert i==2*self.n_colours*(self.grid_size-2)
             assert (state >= 0).all()
         else:
-            pass
-
+            # Continuous features
+            state = np.zeros((2*self.n_colours))
+            i=0
+            for c in range(self.n_colours):
+                state[i] = nearest_inner[c]
+                i+=1
+                state[i] = nearest_outer[c]
+                i+=1
         return state
 
+    def _feature_matrix(self, discrete=True):
 
-test = ObjectWorld(32, 50, 4, 0.3)
+        return np.array([self._gen_obs((y,x), discrete) for 
+            (y,x) in product(range(1, self.grid_size-1), range(1, self.grid_size-1))])
+
+test = ObjectWorld(7, 5, 2, 0.3)
 test.step(0)
 
-for i in test.objects:
-    x = test.objects[i][1]
+x = test.agent_pos
+
+action = 1
+
+y = test.get_neighbours()[action]
+
+y = np.array((1,0))
+
+x = np.array((1,1))
+y = test.get_neighbours(x)[action]
+
+print(test.get_neighbours((1,1))[0])
+print(test.P[(1,1)])
+print(np.array((1,1)))
+exit()
+for k in product(range(1, test.grid_size-1), range(1, test.grid_size-1)):
+    for j in range(len(test.actions)):
+        for i in product(range(1, test.grid_size-1), range(1, test.grid_size-1)):
+
+            print(f"Initial: {i} Action: {test.get_neighbours(i)[j]} Terminal: {k}")
+            print(test.get_neighbours(i))
+            print(test._transition_probability(i,j,k).reshape((5,5)))
+
+        exit()
