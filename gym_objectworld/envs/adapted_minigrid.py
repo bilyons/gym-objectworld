@@ -409,7 +409,10 @@ class MiniGridEnv(gym.Env):
 		self.height = grid_size
 		self.max_steps = max_steps
 		self.p_slip = p_slip
-
+		self.corners = [np.array((1,1)), np.array((1, self.grid_size-2)), np.array((self.grid_size-2, 1)), np.array((self.grid_size-2, self.grid_size-2))]
+		self.off_grid = np.array((0, self.grid_size-1))
+		self.edges = np.array((1, self.grid_size-2))
+		
 		# Transition probability
 		self.P = {(y_i, x_i): {a: {(y_k, x_k): [] for (y_k, x_k) in product(range(1, self.grid_size-1), range(1, self.grid_size-1))}
 				for a in range(len(self.actions))}
@@ -448,53 +451,61 @@ class MiniGridEnv(gym.Env):
 
 		neighbour = False
 
-		# Is it a neighbour
+		# If not a neighbour
 		if not np.any(np.all(k == neighbours, axis=1)):
 			return 0.0
 
 		# Is it the intended move
 		if (neighbours[j] == k).all():
+			# Was the move to stay where you are?		
+			if (neighbours[j] == i).all():
+				# Are you in a corner
+				if np.any(np.all(i == self.corners, axis=1)):
+					return 1-self.p_slip + 3*self.p_slip/len(self.actions)
+				# Are you at an edge
+				if np.in1d(neighbours[j], self.edges).any():
+					return 1-self.p_slip + 2*self.p_slip/len(self.actions)
+				# Are you free roaming
+				return 1-self.p_slip + self.p_slip/len(self.actions)
 			return 1 - self.p_slip + self.p_slip/len(self.actions)
 
-		# If these are not the same point, then we can move there by wind
-		if (i != k).all():
-			return self.p_slip/len(self.actions)
-
+		# If we are in a corner or wall
 		# If these are still not the same point, we can only attend them
 		# by moving off the grid
 		# Corners
-		corners = [np.array((1,1)), np.array((1, self.grid_size-2)), np.array((self.grid_size-2, 1)), np.array((self.grid_size-2, self.grid_size-2))]
-
-		if np.any(np.all(i == corners, axis=1)):
+		if np.any(np.all(i == self.corners, axis=1)):
 			# Corner
 			# Can move off in two directions
 			# Did we intend to move off the grid?
-			if 0 in neighbours[j] or self.grid_size-1 in neighbours[j]:
+			if (0 in neighbours[j] or self.grid_size-1 in neighbours[j]) and (k == i).all():
 				# 3 ways to stay slip into either corner or stay
 				return 1-self.p_slip + 3*self.p_slip/len(self.actions)
 
-			else:
+			elif (i == k).all():
 				# We didn't mean to but we could blow off in two directions or stay
-				if (i == np.array((1,1))).all():
-					if j == 0:
-						if (k==np.array((1,2))).all():
-							print("It's here and its a mistake")
 				return 3*self.p_slip/len(self.actions)
 
-		else:
+		elif np.in1d(i, self.edges).any():
 			# Not a corner, is it an edge?
-			if ((0 != i[0]) or (self.grid_size-1 != i[0])) and ((0 != i[1]) or (self.grid_size-1 != i[1])):
+			if not (i != self.edges).any():
 				# Not an edge
 				return 0.0
 
 			# Edge
 			# Can only move off the edge in one direction
 			# Did we intend to move off the grid
-			if 0 in neighbours[j] or self.grid_size-1 in neighbours[j]:
+			if np.in1d(neighbours[j], self.off_grid).any() and (i==k).all():
 				return 1-self.p_slip + 2*self.p_slip/len(self.actions)
 			else:
-				# Can only blow off by wind
-				return self.wind/len(self.actions)
+				# Can blow or stay
+				if (i == k).all():
+					return 2*self.p_slip/len(self.actions)
+				return self.p_slip/len(self.actions)
+
+		# If these are not the same point, then we can move there by wind
+		if (neighbours != i).any():
+			return self.p_slip/len(self.actions)
+
 
 	def reset(self):
 		# Current position and direction of the agent

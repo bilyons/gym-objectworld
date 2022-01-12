@@ -12,12 +12,6 @@ def convert_transition_array(env):
     return transition_array
 
 def value_iteration(p, reward, discount, eps=1e-3):
-    # if p == None:
-    #     n_states, n_actions, _ = p.shape
-    #     v = np.zeros(n_states)
-    #     q = np.zeros((n_states, n_actions))
-    # p = [np.matrix(p[:, a, :]) for a in range(n_actions)]
-
     t = convert_transition_array(p)
     n_states, n_actions, _ = t.shape
     v = np.zeros(n_states)
