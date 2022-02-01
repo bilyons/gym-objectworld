@@ -13,7 +13,7 @@ class ObjectWorldEnv(MiniGridEnv):
         self.n_colours = n_colours
         self.discrete = discrete
 
-        super().__init__(grid_size=grid_size, p_slip = p_slip, max_steps=4*grid_size*grid_size,)
+        super().__init__(grid_size=grid_size, p_slip = p_slip, max_steps=8,)
 
         if self.discrete == False:
             self.observation_space = spaces.Box(

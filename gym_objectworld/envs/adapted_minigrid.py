@@ -529,6 +529,8 @@ class MiniGridEnv(gym.Env):
 		# Step count since episode start
 		self.step_count = 0
 
+		return self.agent_pos
+
 	def hash(self, size=16):
 		"""Compute a hash that uniquely identifies the current state of the environment.
 		:param size: Size of the hashing
@@ -786,7 +788,7 @@ class MiniGridEnv(gym.Env):
 
 		obs = self._gen_obs()
 
-		return obs, reward, done, {}
+		return self.agent_pos, reward, done, {}
 
 	def render(self, mode='human', close=False, tile_size=TILE_PIXELS):
 		"""

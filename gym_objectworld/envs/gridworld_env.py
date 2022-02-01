@@ -35,7 +35,8 @@ class GridWorldEnv(discrete.DiscreteEnv):
 		self.viewer = None
 
 		desc = generate_map(size, n_rewards)
-
+		self.desc = desc
+		self.grid_size = size
 		self.desc = desc = np.asarray(desc, dtype="c")
 		self.nrow, self.ncol = nrow, ncol = desc.shape
 		self.p_slip = p_slip
@@ -127,4 +128,16 @@ class GridWorldEnv(discrete.DiscreteEnv):
 		if mode != "human":
 			with closing(outfile):
 				return outfile.getvalue()
+				
+	def _reward(self, state):
+		y= state//self.grid_size
+		x= state%self.grid_size
+		newletter = self.desc[y, x]
+		if newletter == b"G":
+			return 1.0
+		elif newletter == b"g":
+			return 1.0
+		else:
+			return 0.0
+		
 

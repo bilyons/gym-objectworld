@@ -64,6 +64,22 @@ class Trajectory:
 
 
 def generate_trajectory(env, policy):
+    # trajectory = []
+
+    # done = False
+    # state = env.reset()
+    # check = 0
+    # check2 = 0
+    # while not done:
+
+    #     action = np.random.choice(range(env.action_space.n), p=policy[state,:])
+
+    #     new_state, _, done, _ = env.step(action)
+
+    #     trajectory += [(state, action, new_state)]
+
+    #     state = new_state
+
     trajectory = []
 
     done = False
@@ -71,12 +87,16 @@ def generate_trajectory(env, policy):
     check = 0
     check2 = 0
     while not done:
+        
+        conv_state = (state[0]-1)*(env.grid_size-2) + (state[1]-1)
 
-        action = np.random.choice(range(env.action_space.n), p=policy[state,:])
+        action = np.random.choice(range(env.action_space.n), p=policy[conv_state,:])
 
         new_state, _, done, _ = env.step(action)
 
-        trajectory += [(state, action, new_state)]
+        conv_new_state = (new_state[0]-1)*(env.grid_size-2) + (new_state[1]-1)
+
+        trajectory += [(conv_state, action, conv_new_state)]
 
         state = new_state
 
@@ -99,9 +119,13 @@ def check_terminal_ratio(trajectories):
     print(t1, t2)
 
 def vector_field(env,trajectories):
-    size = np.int(np.sqrt(env.observation_space.n))
-    out_array = np.zeros((env.observation_space.n, 2))
-    in_array = np.zeros((env.observation_space.n, 2))
+    # size = np.int(np.sqrt(env.observation_space.n))
+    # out_array = np.zeros((env.observation_space.n, 2))
+    # in_array = np.zeros((env.observation_space.n, 2))
+
+    size = np.int(env.grid_size-2)
+    out_array = np.zeros(((env.grid_size-2)**2, 2))
+    in_array = np.zeros(((env.grid_size-2)**2, 2))
 
     for t in trajectories:
         for i in range(len(t.transitions())):
@@ -128,4 +152,4 @@ def vector_field(env,trajectories):
                 print("Movement error")
                 print(t.transitions()[i][2] - t.transitions()[i][0])
                 exit()            
-    return out_array, in_array, out_array-in_array
+    return out_array, in_array, in_array - out_array
