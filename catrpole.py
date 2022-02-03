@@ -1,5 +1,10 @@
 import gym, os
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
 from itertools import count
+from collections import namedtuple
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -7,80 +12,79 @@ import torch.nn.functional as F
 from torch.distributions import Categorical
 
 from gym_objectworld.solvers import actorcritic as AC
+from gym_objectworld.utilities import trajectory_continuous as T
 
-
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-env = gym.make("CartPole-v0").unwrapped
+env = gym.make("CartPole-v0")
 
 state_space = env.observation_space.shape[0]
 action_space = env.action_space.n
-lr = 0.0001
 
 # Train Expert AC
 
-actor = AC.Actor(state_space, action_space).to(device)
-critic = AC.Critic(state_space, action_space).to(device)
+model = AC.ActorCritic(state_space, action_space)
 
-optimizerA = optim.Adam(actor.parameters())
-optimizerC = optim.Adam(critic.parameters())
+train = False
 
-for ep in range(1000):
+if train == True:
 
-	state = env.reset()
-	log_probs = []
-	values = []
-	rewards = []
-	masks = []
-	entropy = 0
+	# Main loop
+	window = 50
+	reward_history = []
 
-	for i in count():
+	for ep in count():
 
-		if ep%50 == 0:
-			env.render()
+		state = env.reset()
 
-		state = torch.FloatTensor(state).to(device)
+		ep_reward = 0
 
-		dist, value = actor(state), critic(state)
+		for t in range(1,1000):
 
-		action = dist.sample()
+			if ep%50 == 0:
+				env.render()
 
-		next_state, reward, done, _ = env.step(action.cpu().numpy())
+			action = model.select_action(state)
 
-		log_prob = dist.log_prob(action).unsqueeze(0)
+			state, reward, done, _ = env.step(action)
 
-		entropy += dist.entropy().mean()
+			model.rewards.append(reward)
+			ep_reward += reward
 
-		log_probs.append(log_prob)
-		values.append(value)
-		rewards.append(torch.tensor([reward], dtype=torch.float, device=device))
-		masks.append(torch.tensor([1-done], dtype=torch.float, device=device))
+			if done:
+				break
 
-		state = next_state
+		model.compute_returns(0.99)
+		reward_history.append(ep_reward)
 
-		if done:
-			print(f'Episode: {ep} Length: {i}')
+		# Result information
+		if ep % 50 == 0:
+			mean = np.mean(reward_history[-window:])
+			print(f"Episode: {ep} Last Reward: {ep_reward} Rolling Mean: {mean}")
+
+		if np.mean(reward_history[-100:])>199:
+			print(f"Environment solved at episode {ep}, average run length > 200")
 			break
 
-	next_state = torch.FloatTensor(next_state).to(device)
-	next_value = critic(next_state)
-	returns = AC.compute_returns(next_value, rewards, masks)
+	torch.save(model.state_dict(), os.getcwd()+'/model.pth')
 
-	log_probs = torch.cat(log_probs)
-	returns = torch.cat(returns).detach()
-	values = torch.cat(values)
+	fig, ((ax1), (ax2)) = plt.subplots(2,1, sharey=True, figsize=[9,9])
+	rolling_mean = pd.Series(reward_history).rolling(window).mean()
+	std = pd.Series(reward_history).rolling(window).std()
+	ax1.plot(rolling_mean)
+	ax1.fill_between(range(len(reward_history)), rolling_mean-std, rolling_mean+std,
+		color='orange', alpha=0.2)
+	ax1.set_title('Episode Length Moving Average ({}-episode window)'.format(window))
+	ax1.set_xlabel('Episode')
+	ax1.set_ylabel('Episode Length')
+	ax2.plot(reward_history)
+	ax2.set_title('Episode Rewards')
+	ax2.set_xlabel('Episode')
+	ax2.set_ylabel('Episode Length')
+	plt.show()
+	env.close()
 
-	advantage = returns - values
+else:
+	model.load_state_dict(torch.load(os.getcwd()+'/model.pth'))
 
-	actor_loss = -(log_probs*advantage.detach()).mean()
-	critic_loss = advantage.pow(2).mean()
+ts = list(T.generate_trajectories(10, env, model))
 
-	optimizerA.zero_grad()
-	optimizerC.zero_grad()
-
-	actor_loss.backward()
-	critic_loss.backward()
-
-	optimizerA.step()
-	optimizerC.step()
-
-env.close()
+print(ts)
