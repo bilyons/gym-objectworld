@@ -4,7 +4,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from itertools import count
 from collections import namedtuple
-
+import matplotlib.pyplot as plt
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -13,7 +14,10 @@ from torch.distributions import Categorical
 
 from gym_objectworld.solvers import actorcritic as AC
 from gym_objectworld.utilities import trajectory_continuous as T
+from gym_objectworld.utilities import rbf as R
+
 np.set_printoptions(threshold=sys.maxsize)
+np.set_printoptions(formatter={'float': lambda x: "{0:0.3f}".format(x)})
 env = gym.make("CartPole-v0")
 
 state_space = env.observation_space.shape[0]
@@ -24,7 +28,6 @@ action_space = env.action_space.n
 model = AC.ActorCritic(state_space, action_space)
 
 train = False
-
 if train == True:
 
 	# Main loop
@@ -87,65 +90,42 @@ else:
 
 def divergence(f, h):
 	num_dims = len(f)
-	print(np.gradient(f[2], h[2], axis=2))
-	exit()
 	return np.ufunc.reduce(np.add, [np.gradient(f[i], h[i],axis=i) for i in range(num_dims)])
 
-ts = list(T.generate_trajectories(1, env, model))
+ts = list(T.generate_trajectories(20, env, model))
 
-
-initial_array, div_array = T.vector_field(ts)
-
-Nth = 100
-Nth_dot = 100
-Nx = Nth
-Nx_dot = Nth_dot
-
-xmin = env.observation_space.low[0]
-xmax = env.observation_space.high[0]
-x_dotmin = env.observation_space.low[0]
-x_dotmax = env.observation_space.high[0]
-thmax = env.observation_space.high[2]
-thmin = env.observation_space.low[2]
-th_dotmax = env.observation_space.high[2]
-th_dotmin = env.observation_space.low[2]
-
-dx = (xmax -xmin)/(Nx-1.)
-dx_dot = (x_dotmax -x_dotmin)/(Nx_dot-1.)
-dth = (thmax -thmin)/(Nth-1.)
-dth_dot = (th_dotmax -th_dotmin)/(Nth_dot-1.)
-h=[dx,dx_dot, dth, dth_dot]
-
-x = initial_array[:,0]
-x_dot = initial_array[:,1]
-th = initial_array[:,2]
-th_dot = initial_array[:,3]
-
-xx, x_dotx_dot, thth, th_dotth_dot = np.meshgrid(x, x_dot, th, th_dot)
-
-print(xx.shape)
-
-print(initial_array[0])
-print(xx[0])
-print(x_dotx_dot[0])
-
-Fx = np.array( [div_array[initial_array == np.array((xx[0,i,0,0], x_dotx_dot[i,0,0,0], thth[0,0,i,0], th_dotth_dot[0,0,0,i])), 0] for i in range(10)])
-
-print(Fx)
+x = R.RBFs(env, 20)
 exit()
-Fx_dot = np.array([div_array[initial_array == np.array((xx[0,i,0,0], x_dotx_dot[i,0,0,0], thth[0,0,i,0], th_dotth_dot[0,0,0,i], 0))] for i in range(10)])
-Fth = np.array([div_array[initial_array == np.array((xx[0,i,0,0], x_dotx_dot[i,0,0,0], thth[0,0,i,0], th_dotth_dot[0,0,0,i], 0))] for i in range(10)])
-Fth_dot = np.array([div_array[initial_array == np.array((xx[0,i,0,0], x_dotx_dot[i,0,0,0], thth[0,0,i,0], th_dotth_dot[0,0,0,i],0))] for i in range(10)])
-# Fx = np.array([div_array[initial_array[:,0] == xx[0,i,0,0], 0] for i in range(200) ])
-# Fx_dot = np.array([div_array[initial_array[:,1] == x_dotx_dot[i,0,0,0], 1] for i in range(200) ])
-# Fth = np.array([div_array[initial_array[:,2] == thth[0,0,i,0], 2] for i in range(200) ])
-# Fth_dot = np.array([div_array[initial_array[:,3] == th_dotth_dot[0,0,0,i], 3] for i in range(200) ])
 
-# Fx = np.array([div_array[]])
+vector_array, h = T.vector_field(ts)
 
-# print()
+Fx = vector_array[:,:,:,:,0]
+Fx_dot = vector_array[:,:,:,:,1]
+Fth = vector_array[:,:,:,:,2]
+Fth_dot = vector_array[:,:,:,:,3]
+
 F = [Fx, Fx_dot, Fth, Fth_dot]
-# print(F.shape)
+
 g = divergence(F, h)
 
-# print(g)
+print(g.shape)
+# Reduce to 2D for visualisation
+reduced_array = np.zeros((g.shape[0], g.shape[2]))
+
+for j in range(g.shape[2]):
+	for i in range(g.shape[0]):
+		reduced_array[i,j] = np.max(g[i,:,j,:])
+
+
+x = np.linspace(0, g.shape[0], g.shape[0], dtype=np.int64)
+y = np.linspace(0, g.shape[2], g.shape[2], dtype=np.int64)
+
+rows = 1
+cols = 1
+ax = plt.subplot(rows,cols,1,aspect='equal',title='div numerical outward moves')
+#im=plt.pcolormesh(x, y, g)
+im = plt.pcolormesh(x, y, reduced_array.T, shading='nearest', cmap=plt.cm.get_cmap('coolwarm'))
+divider = make_axes_locatable(ax)
+cax = divider.append_axes("right", size="5%", pad=0.05)
+cbar = plt.colorbar(im, cax = cax)
+plt.show()
