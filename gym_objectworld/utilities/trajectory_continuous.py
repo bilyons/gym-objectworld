@@ -70,6 +70,7 @@ def generate_trajectory(env, model):
     done = False
     state = env.reset()
 
+    t=0
     while not done:
         
         action = model.select_action(state)
@@ -79,6 +80,10 @@ def generate_trajectory(env, model):
         trajectory += [(state, action, new_state)]
 
         state = new_state
+        t+= 1
+
+        if t==10:
+            done = True
 
     return Trajectory(trajectory)
 
@@ -89,34 +94,16 @@ def generate_trajectories(n, env, model):
 
     return (_generate_one() for _ in range(n))
 
-def vector_field(env,trajectories):
-    size = np.int(env.grid_size-2)
-    out_array = np.zeros(((env.grid_size-2)**2, 2))
-    in_array = np.zeros(((env.grid_size-2)**2, 2))
-
+def vector_field(trajectories):
+    div_array = []
+    initial_array = []
+    # For the vector field of continuous, loop over all trajectories
     for t in trajectories:
         for i in range(len(t.transitions())):
-            if t.transitions()[i][2] - t.transitions()[i][0] == size:
-                # I went up
-                out_array[t.transitions()[i][0], :] +=[0,1]
-                in_array[t.transitions()[i][2], :] +=[0,-1]
-            elif t.transitions()[i][2] - t.transitions()[i][0] == -size:
-                # I went down
-                out_array[t.transitions()[i][0], :] +=[0,-1]
-                in_array[t.transitions()[i][2], :] +=[0,1]
-            elif t.transitions()[i][2] - t.transitions()[i][0] == 1:
-                # I went right
-                out_array[t.transitions()[i][0], :] +=[1,0]
-                in_array[t.transitions()[i][2], :] +=[-1,0]
-            elif t.transitions()[i][2] - t.transitions()[i][0] == -1:
-                # I went left
-                out_array[t.transitions()[i][0], :] +=[-1,0]
-                in_array[t.transitions()[i][2], :] +=[1,0]
-            elif t.transitions()[i][2] - t.transitions()[i][0] == 0:
-                # I went nowhere
-                out_array[t.transitions()[i][0], :] +=[0,0]
-            else:
-                print("Movement error")
-                print(t.transitions()[i][2] - t.transitions()[i][0])
-                exit()            
-    return out_array, in_array, in_array - out_array
+        # For each transition in the trajectory, action is +1 or 0
+            div_array.append(t.transitions()[i][2] - t.transitions()[i][0])
+            initial_array.append(t.transitions()[i][0])
+
+    div_array = np.array(div_array)
+    initial_array = np.array(initial_array)
+    return initial_array, div_array 

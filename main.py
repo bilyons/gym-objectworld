@@ -73,18 +73,27 @@ y = np.linspace(0, size-1, size, dtype=np.int64)
 xx,yy = np.meshgrid(x,y)
 zz = xx+size*yy
 
+# print(tot)
+
 Fx = tot[xx+yy*size, 1]
 Fy = tot[xx+yy*size, 0]
-
+# print(Fx)
+# exit()
 Fx1 = tot1[xx+yy*size, 1]
 Fy1 = tot1[xx+yy*size, 0]
 
 Fx2 = tot2[xx+yy*size, 1]
 Fy2 = tot2[xx+yy*size, 0]
 
+
+
 F= [Fx2, Fy2]
 g = divergence(F, h)
-
+print(xx)
+exit()
+print(Fx)
+print(Fy)
+exit()
 
 # Plotting
 

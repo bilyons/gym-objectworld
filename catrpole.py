@@ -1,4 +1,4 @@
-import gym, os
+import gym, os, sys
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -13,7 +13,7 @@ from torch.distributions import Categorical
 
 from gym_objectworld.solvers import actorcritic as AC
 from gym_objectworld.utilities import trajectory_continuous as T
-
+np.set_printoptions(threshold=sys.maxsize)
 env = gym.make("CartPole-v0")
 
 state_space = env.observation_space.shape[0]
@@ -85,6 +85,67 @@ if train == True:
 else:
 	model.load_state_dict(torch.load(os.getcwd()+'/model.pth'))
 
-ts = list(T.generate_trajectories(10, env, model))
+def divergence(f, h):
+	num_dims = len(f)
+	print(np.gradient(f[2], h[2], axis=2))
+	exit()
+	return np.ufunc.reduce(np.add, [np.gradient(f[i], h[i],axis=i) for i in range(num_dims)])
 
-print(ts)
+ts = list(T.generate_trajectories(1, env, model))
+
+
+initial_array, div_array = T.vector_field(ts)
+
+Nth = 100
+Nth_dot = 100
+Nx = Nth
+Nx_dot = Nth_dot
+
+xmin = env.observation_space.low[0]
+xmax = env.observation_space.high[0]
+x_dotmin = env.observation_space.low[0]
+x_dotmax = env.observation_space.high[0]
+thmax = env.observation_space.high[2]
+thmin = env.observation_space.low[2]
+th_dotmax = env.observation_space.high[2]
+th_dotmin = env.observation_space.low[2]
+
+dx = (xmax -xmin)/(Nx-1.)
+dx_dot = (x_dotmax -x_dotmin)/(Nx_dot-1.)
+dth = (thmax -thmin)/(Nth-1.)
+dth_dot = (th_dotmax -th_dotmin)/(Nth_dot-1.)
+h=[dx,dx_dot, dth, dth_dot]
+
+x = initial_array[:,0]
+x_dot = initial_array[:,1]
+th = initial_array[:,2]
+th_dot = initial_array[:,3]
+
+xx, x_dotx_dot, thth, th_dotth_dot = np.meshgrid(x, x_dot, th, th_dot)
+
+print(xx.shape)
+
+print(initial_array[0])
+print(xx[0])
+print(x_dotx_dot[0])
+
+Fx = np.array( [div_array[initial_array == np.array((xx[0,i,0,0], x_dotx_dot[i,0,0,0], thth[0,0,i,0], th_dotth_dot[0,0,0,i])), 0] for i in range(10)])
+
+print(Fx)
+exit()
+Fx_dot = np.array([div_array[initial_array == np.array((xx[0,i,0,0], x_dotx_dot[i,0,0,0], thth[0,0,i,0], th_dotth_dot[0,0,0,i], 0))] for i in range(10)])
+Fth = np.array([div_array[initial_array == np.array((xx[0,i,0,0], x_dotx_dot[i,0,0,0], thth[0,0,i,0], th_dotth_dot[0,0,0,i], 0))] for i in range(10)])
+Fth_dot = np.array([div_array[initial_array == np.array((xx[0,i,0,0], x_dotx_dot[i,0,0,0], thth[0,0,i,0], th_dotth_dot[0,0,0,i],0))] for i in range(10)])
+# Fx = np.array([div_array[initial_array[:,0] == xx[0,i,0,0], 0] for i in range(200) ])
+# Fx_dot = np.array([div_array[initial_array[:,1] == x_dotx_dot[i,0,0,0], 1] for i in range(200) ])
+# Fth = np.array([div_array[initial_array[:,2] == thth[0,0,i,0], 2] for i in range(200) ])
+# Fth_dot = np.array([div_array[initial_array[:,3] == th_dotth_dot[0,0,0,i], 3] for i in range(200) ])
+
+# Fx = np.array([div_array[]])
+
+# print()
+F = [Fx, Fx_dot, Fth, Fth_dot]
+# print(F.shape)
+g = divergence(F, h)
+
+# print(g)
