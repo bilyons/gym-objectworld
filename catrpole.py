@@ -87,8 +87,6 @@ else:
 
 def divergence(f, h):
 	num_dims = len(f)
-	print(np.gradient(f[2], h[2], axis=2))
-	exit()
 	return np.ufunc.reduce(np.add, [np.gradient(f[i], h[i],axis=i) for i in range(num_dims)])
 
 ts = list(T.generate_trajectories(1, env, model))
