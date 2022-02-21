@@ -89,7 +89,7 @@ Fy2 = tot2[xx+yy*size, 0]
 
 F= [Fx2, Fy2]
 g = divergence(F, h)
-print(xx)
+print(g.shape)
 exit()
 print(Fx)
 print(Fy)
