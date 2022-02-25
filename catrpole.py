@@ -2,6 +2,7 @@ import gym, os, sys
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy.interpolate import RBFInterpolator
 from itertools import count
 from collections import namedtuple
 import matplotlib.pyplot as plt
@@ -54,7 +55,7 @@ if train == True:
 
 			if done:
 				break
-
+		print(reward)
 		model.compute_returns(0.99)
 		reward_history.append(ep_reward)
 
@@ -67,7 +68,7 @@ if train == True:
 			print(f"Environment solved at episode {ep}, average run length > 200")
 			break
 
-	torch.save(model.state_dict(), os.getcwd()+'/model.pth')
+	# torch.save(model.state_dict(), os.getcwd()+'/model.pth')
 
 	fig, ((ax1), (ax2)) = plt.subplots(2,1, sharey=True, figsize=[9,9])
 	rolling_mean = pd.Series(reward_history).rolling(window).mean()
@@ -88,25 +89,25 @@ if train == True:
 else:
 	model.load_state_dict(torch.load(os.getcwd()+'/model.pth'))
 
-def divergence(f, h):
+def divergence(f):
 	num_dims = len(f)
-	return np.ufunc.reduce(np.add, [np.gradient(f[i], h[i],axis=i) for i in range(num_dims)])
+	return np.ufunc.reduce(np.add, [np.gradient(f[i],axis=i) for i in range(num_dims)])
 
-ts = list(T.generate_trajectories(20, env, model))
+ts = list(T.generate_trajectories(1, env, model))
 
-x = R.RBFs(env, 20)
+rbfs, vectors = T.vector_field(env, ts)
+
+x = (np.vstack(rbfs.centres))
+
+print(x)
+
+x = x[np.lexsort((x[:,0], x[:,1], x[:,2]))]
+
+print(x)
+
 exit()
 
-vector_array, h = T.vector_field(ts)
-
-Fx = vector_array[:,:,:,:,0]
-Fx_dot = vector_array[:,:,:,:,1]
-Fth = vector_array[:,:,:,:,2]
-Fth_dot = vector_array[:,:,:,:,3]
-
-F = [Fx, Fx_dot, Fth, Fth_dot]
-
-g = divergence(F, h)
+g = divergence(F)
 
 print(g.shape)
 # Reduce to 2D for visualisation

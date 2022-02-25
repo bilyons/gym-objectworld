@@ -87,6 +87,7 @@ class ActorCritic(nn.Module):
 		returns = (returns - returns.mean())/(returns.std()+self.eps)
 
 		for (log_prob, value), R in zip(saved_actions, returns):
+
 			advantage = R - value.item()
 
 			policy_losses.append(-log_prob*advantage)
@@ -96,7 +97,6 @@ class ActorCritic(nn.Module):
 		self.optimizer.zero_grad()
 
 		loss = torch.stack(policy_losses).sum() + torch.stack(value_losses).sum()
-
 		loss.backward()
 		self.optimizer.step()
 

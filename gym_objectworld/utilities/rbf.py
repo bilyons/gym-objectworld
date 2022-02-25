@@ -1,6 +1,8 @@
 import numpy as np
+from scipy import *
+from scipy.linalg import norm, pinv
 from itertools import chain
-
+import random
 
 class RBFs:
 
@@ -13,22 +15,33 @@ class RBFs:
 		
 	def _construct(self):
 		x_high = self.observation_space.high[0]
-		th_high = self.observation_space.high[2]
-		x_dot_high = 2
-		th_dot_high = 2
+		y_high = self.observation_space.high[1]
+		v_high = self.observation_space.high[2]
 
-		h_range = np.array((x_high, x_dot_high, th_high, th_dot_high))
+		h_range = np.array((x_high, y_high, v_high))
 		l_range = -h_range
 
-		centres = [random.uniform(l_range, h_range, self.observation_space) for i in range(self.n_rbfs)]
+		centres = [np.random.uniform(l_range, h_range, self.observation_space.shape[0]) for i in range(self.n_rbfs)]
 		return centres
 
 	def _signal_strength(self, c, d):
 		assert len(d) == self.observation_dim
 		return exp(-norm(c-d)**2)
 
+	# def _signal_strength2(self, c, d):
+	# 	assert len(d) == self.observation_dim
+	# 	return exp(-norm(c-d)**2)
+
 	def _cal_activation(self, X):
-		A = zeros(X.shape[0], self.n_rbfs, float)
+		G = np.zeros((X.shape[0], self.n_rbfs), float)
 		for ci, c in enumerate(self.centres):
 			for xi, x in enumerate(X):
 				G[xi, ci] = self._signal_strength(c, x)
+		return G
+
+	# def _cal_activation2(self, X):
+	# 	G = np.zeros((X.shape[0], self.n_rbfs), float)
+	# 	for ci, c in enumerate(self.centres):
+	# 		for xi, x in enumerate(X):
+	# 			G[xi, ci] = self._signal_strength2(c, x)
+	# 	return G

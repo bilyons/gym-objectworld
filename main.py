@@ -61,7 +61,7 @@ h=[dx,dy]
 
 POL = V.find_policy(env, ground_r, GAMMA)
 
-ts= list(T.generate_trajectories(512, env, POL))
+ts= list(T.generate_trajectories(1, env, POL))
 
 tot, tot1, tot2 = T.vector_field(env,ts)
 
@@ -74,6 +74,8 @@ xx,yy = np.meshgrid(x,y)
 zz = xx+size*yy
 
 # print(tot)
+print(zz)
+exit()
 
 Fx = tot[xx+yy*size, 1]
 Fy = tot[xx+yy*size, 0]
