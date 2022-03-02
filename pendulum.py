@@ -115,7 +115,7 @@ def divergence(f, h):
 
 
 # Redo
-ts = list(T.generate_trajectories(1, env, agent))
+ts = list(T.generate_trajectories(10, env, agent))
 
 states, transitions = T.vector_field(env, ts)
 
@@ -123,7 +123,7 @@ states, transitions = T.vector_field(env, ts)
 raw_tuples = list(zip(states, transitions))
 
 distance_array = dist.cdist(states, states)
-size_of_neighbourhood = 3
+size_of_neighbourhood = 1
 
 idx_array = distance_array.argsort()[:,:size_of_neighbourhood+1]
 # print(idx_array[0])
@@ -161,8 +161,8 @@ for k in range(len(states[0])):
 
 for j in range(len(states)):
 
-	comparing_state = df.iloc[j]["initial_state"]
-	comparing_vector = df.iloc[j]["vector"]
+	x0 = df.iloc[j]["initial_state"]
+	y0 = df.iloc[j]["vector"]
 
 	weighting = np.zeros(size_of_neighbourhood)
 	grad = []
@@ -170,27 +170,40 @@ for j in range(len(states)):
 
 		# Calculate divergence
 		# For each we have as many as i neighbours to consider
-		delta_pos = np.subtract(comparing_state, df.iloc[df.iloc[j][f"Neighbour_{i}"]]['initial_state'])
-		# print("delta", delta_pos)
-		delta_vec = np.subtract(comparing_vector, df.iloc[df.iloc[j][f"Neighbour_{i}"]]['vector'])
-		# print("delta_vec", delta_vec)
-		weighting[i] = df.iloc[j][f"Distance_to_Neighbour_{i}"]
-		# print("local_div", np.divide(delta_vec,delta_pos))
-		grad.append(np.divide(delta_vec,delta_pos))
+		# delta_pos = np.subtract(comparing_state, df.iloc[df.iloc[j][f"Neighbour_{i}"]]['initial_state'])
+		# # print("delta", delta_pos)
+		# delta_vec = np.subtract(comparing_vector, df.iloc[df.iloc[j][f"Neighbour_{i}"]]['vector'])
+		# # print("delta_vec", delta_vec)
+		# weighting[i] = df.iloc[j][f"Distance_to_Neighbour_{i}"]
+		# # print("local_div", np.divide(delta_vec,delta_pos))
+		# grad.append(np.divide(delta_vec,delta_pos))
 
-	# Weighting normalize
-	weighting = softmax(weighting)
-	grad = np.vstack(grad)
+		# Collect initial states and the vectors from them
+		x1 = df.iloc[df.iloc[j][f"Neighbour_{i}"]]['initial_state']
+		y1 = df.iloc[df.iloc[j][f"Neighbour_{i}"]]['vector']
 
-	# print("gradient", grad)
-	vector = np.matmul(weighting, grad)
-	div = np.sum(np.matmul(weighting, grad))
+		# print(x0, x1)
+
+		# det = (x0[0]*y0[0])*(-x0[1]*y1[1])*(- x1[0]*y1[1])*(x1[1]*y1[1])
+
+		div = (x0[0]*y0[0] - x0[1]*y1[1] - x1[0]*y1[1] + x1[1]*y1[1])
+
+
+
+
+	# # Weighting normalize
+	# weighting = softmax(weighting)
+	# grad = np.vstack(grad)
+
+	# # print("gradient", grad)
+	# vector = np.matmul(weighting, grad)
+	# div = np.sum(np.matmul(weighting, grad))
 
 	# print("divergence", div)
-	df.iloc[j, df.columns.get_loc("Divergence")] = div
+		df.iloc[j, df.columns.get_loc("Divergence")] = div
 
-	for k in range(len(states[0])):
-		df.iloc[j, df.columns.get_loc(f"x_{k}")] = vector[k]
+	# for k in range(len(states[0])):
+	# 	df.iloc[j, df.columns.get_loc(f"x_{k}")] = vector[k]
 
 x = states[:,0]
 y = states[:,1]
@@ -204,11 +217,8 @@ print(df.loc[df['Divergence'].idxmax()])
 rows = 1
 cols = 1
 fig = plt.figure(figsize=(10,10))
-ax = fig.add_subplot(111)
-plt.pcolormesh(xx,yy,v)
-plt.scatter(x,y,v)
-cbar = plt.colorbar()
-
+ax = fig.add_subplot(111, projection='3d')
+ax.scatter3D(x,y,v,s=1)
 plt.show()
 
 plt.pcolor(df)

@@ -70,7 +70,7 @@ def generate_trajectory(env, model):
 
     done = False
     state = env.reset()
-    d_state = env.state
+    d_state = np.array([ (np.arctan2(state[1], state[0])), state[2] ] )
     t=0
     while not done:
         
@@ -79,7 +79,7 @@ def generate_trajectory(env, model):
 
         new_state, _, done, _ = env.step(action)
 
-        n_d_state = env.state
+        n_d_state = np.array([np.arctan2(new_state[1], new_state[0]), new_state[2]])
 
         trajectory += [(d_state, action, n_d_state)]
 
