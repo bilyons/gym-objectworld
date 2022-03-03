@@ -14,10 +14,12 @@ from gym_objectworld.solvers import value_iteration_objectworld as V
 from gym_objectworld.utilities import trajectory as T
 from gym_objectworld import plot as P
 from gym_objectworld.utilities import discrete as D
+random.seed(0)
+np.random.seed(0)
 
 size = 32
 
-env = ObjectWorldEnv(size+2, 50, 4, 0.3, False)
+env = ObjectWorldEnv(size+2, 64, 4, 0.3, False)
 
 style = {
 	'border': {'color': 'red', 'linewidth': 0.5},
@@ -33,23 +35,11 @@ TAU=0.25
 
 Q = np.ones(((env.grid_size-2)**2, env.action_space.n))
 
-def choose_action(env, state):
-	actionable_state = (state[0]-1)*env.grid_size-2 + state[1]-1
-
-	action = 0
-	if np.random.rand() < EPSILON:
-		action = env.action_space.sample()
-	else:
-		prob = softmax(Q[state,:]/TAU)
-		action = np.random.choice(env.action_space.n, p=prob)
-	return action
-
 def divergence(f, h):
 	num_dims = len(f)
 	return np.ufunc.reduce(np.add, [np.gradient(f[i], h[i],axis=i) for i in range(num_dims)])
 
 ground_r = np.array([env._reward((y_i, x_i)) for (y_i, x_i) in product(range(1, env.grid_size-1), range(1, env.grid_size-1))])
-
 
 NY = env.grid_size-2
 NX = NY
@@ -63,7 +53,7 @@ h=[dx,dy]
 
 POL = V.find_policy(env, ground_r, GAMMA)
 
-ts= list(T.generate_trajectories_objectworld(3000, env, POL))
+ts= list(T.generate_trajectories_objectworld(1, env, POL))
 
 tot, tot1, tot2 = T.vector_field_objectworld(env,ts)
 
@@ -74,10 +64,6 @@ y = np.linspace(0, size-1, size, dtype=np.int64)
 
 xx,yy = np.meshgrid(x,y)
 zz = xx+size*yy
-
-# print(tot)
-# print(zz)
-# exit()
 
 Fx = tot[xx+yy*size, 1]
 Fy = tot[xx+yy*size, 0]
@@ -93,11 +79,6 @@ Fy2 = tot2[xx+yy*size, 0]
 
 F= [Fx2, Fy2]
 g = divergence(F, h)
-# print(g.shape)
-# exit()
-# print(Fx)
-# print(Fy)
-# exit()
 
 # Plotting
 

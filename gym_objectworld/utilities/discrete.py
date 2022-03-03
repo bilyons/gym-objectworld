@@ -1,7 +1,7 @@
 import gym
 from scipy.special import softmax
 import numpy as np
-
+np.random.seed(0)
 def choose_action(state):
 	action = 0
 	if np.random.rand() < EPSILON:

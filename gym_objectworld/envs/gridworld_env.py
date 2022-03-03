@@ -12,7 +12,7 @@ LEFT = 0
 DOWN = 1
 RIGHT = 2
 UP = 3
-
+np.random.seed(0)
 def generate_map(size, n_rewards):
 	if n_rewards == 1:
 		res = np.random.choice([" "], ((size, size)), p=[1])

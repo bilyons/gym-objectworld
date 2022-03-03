@@ -13,7 +13,7 @@ from itertools import product
 from scipy.special import logsumexp as sp_lse
 from gym_objectworld.envs import GridWorldEnv
 from gym_objectworld.envs import ObjectWorldEnv
-
+np.random.seed(0)
 def convert_transition_array(env):
 
 	# Can I change this?

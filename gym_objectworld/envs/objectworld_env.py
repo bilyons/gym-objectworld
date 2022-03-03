@@ -1,6 +1,6 @@
 from .adapted_minigrid import *
 from itertools import product
-
+np.random.seed(0)
 class ObjectWorldEnv(MiniGridEnv):
     """
     Empty grid environment, no obstacles, sparse reward

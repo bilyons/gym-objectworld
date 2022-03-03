@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.special import logsumexp as sp_lse
-
+np.random.seed(0)
 def convert_transition_array(env):
     transition_array = np.zeros((env.observation_space.n, env.action_space.n, env.observation_space.n))
 

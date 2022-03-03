@@ -6,7 +6,6 @@ thereof.
 import numpy as np
 from itertools import chain
 
-
 class Trajectory:
     """
     A trajectory consisting of states, corresponding actions, and outcomes.
