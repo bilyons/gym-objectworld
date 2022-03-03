@@ -115,7 +115,7 @@ def divergence(f, h):
 
 
 # Redo
-ts = list(T.generate_trajectories(10, env, agent))
+ts = list(T.generate_trajectories(3, env, agent))
 
 states, transitions = T.vector_field(env, ts)
 
@@ -185,8 +185,8 @@ for j in range(len(states)):
 		# print(x0, x1)
 
 		# det = (x0[0]*y0[0])*(-x0[1]*y1[1])*(- x1[0]*y1[1])*(x1[1]*y1[1])
-
-		div = (x0[0]*y0[0] - x0[1]*y1[1] - x1[0]*y1[1] + x1[1]*y1[1])
+		det = x0[0]*x1[1] - x0[1]*x1[0]
+		div = (x0[0]*y0[0] - x0[1]*y1[1] - x1[0]*y1[1] + x1[1]*y1[1])/det
 
 
 
@@ -219,6 +219,7 @@ cols = 1
 fig = plt.figure(figsize=(10,10))
 ax = fig.add_subplot(111, projection='3d')
 ax.scatter3D(x,y,v,s=1)
+# ax.set_zlim(-5,5)
 plt.show()
 
 plt.pcolor(df)

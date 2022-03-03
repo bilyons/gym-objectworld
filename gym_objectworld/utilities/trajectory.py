@@ -63,22 +63,7 @@ class Trajectory:
         return length
 
 
-def generate_trajectory(env, policy):
-    # trajectory = []
-
-    # done = False
-    # state = env.reset()
-    # check = 0
-    # check2 = 0
-    # while not done:
-
-    #     action = np.random.choice(range(env.action_space.n), p=policy[state,:])
-
-    #     new_state, _, done, _ = env.step(action)
-
-    #     trajectory += [(state, action, new_state)]
-
-    #     state = new_state
+def generate_trajectory_objectworld(env, policy):
 
     trajectory = []
 
@@ -87,7 +72,7 @@ def generate_trajectory(env, policy):
     check = 0
     check2 = 0
     while not done:
-        
+ 
         conv_state = (state[0]-1)*(env.grid_size-2) + (state[1]-1)
 
         action = np.random.choice(range(env.action_space.n), p=policy[conv_state,:])
@@ -102,23 +87,72 @@ def generate_trajectory(env, policy):
 
     return Trajectory(trajectory)
 
-def generate_trajectories(n, world, policy):
+def generate_trajectories_objectworld(n, world, policy):
 
     def _generate_one():
-        return generate_trajectory(world, policy)
+        return generate_trajectory_objectworld(world, policy)
 
     return (_generate_one() for _ in range(n))
-def check_terminal_ratio(trajectories):
-    t1 = 0
-    t2 = 0
-    for t in trajectories:
-        if t.transitions()[-1][2] == 24:
-            t1+=1
-        else:
-            t2+=1
-    print(t1, t2)
 
-def vector_field(env,trajectories):
+def generate_trajectory_gridworld(env, policy):
+    trajectory = []
+
+    done = False
+    state = env.reset()
+    check = 0
+    check2 = 0
+    while not done:
+
+        action = np.random.choice(range(env.action_space.n), p=policy[state,:])
+
+        new_state, _, done, _ = env.step(action)
+
+        trajectory += [(state, action, new_state)]
+
+        state = new_state
+
+    return Trajectory(trajectory)
+
+def generate_trajectories_gridworld(n, world, policy):
+
+    def _generate_one():
+        return generate_trajectory_gridworld(world, policy)
+
+    return (_generate_one() for _ in range(n))
+
+def vector_field_gridworld(env,trajectories):
+    size = np.int(np.sqrt(env.observation_space.n))
+    out_array = np.zeros((env.observation_space.n, 2))
+    in_array = np.zeros((env.observation_space.n, 2))
+
+    for t in trajectories:
+        for i in range(len(t.transitions())):
+            if t.transitions()[i][2] - t.transitions()[i][0] == size:
+                # I went up
+                out_array[t.transitions()[i][0], :] +=[0,1]
+                in_array[t.transitions()[i][2], :] +=[0,-1]
+            elif t.transitions()[i][2] - t.transitions()[i][0] == -size:
+                # I went down
+                out_array[t.transitions()[i][0], :] +=[0,-1]
+                in_array[t.transitions()[i][2], :] +=[0,1]
+            elif t.transitions()[i][2] - t.transitions()[i][0] == 1:
+                # I went right
+                out_array[t.transitions()[i][0], :] +=[1,0]
+                in_array[t.transitions()[i][2], :] +=[-1,0]
+            elif t.transitions()[i][2] - t.transitions()[i][0] == -1:
+                # I went left
+                out_array[t.transitions()[i][0], :] +=[-1,0]
+                in_array[t.transitions()[i][2], :] +=[1,0]
+            elif t.transitions()[i][2] - t.transitions()[i][0] == 0:
+                # I went nowhere
+                out_array[t.transitions()[i][0], :] +=[0,0]
+            else:
+                print("Movement error")
+                print(t.transitions()[i][2] - t.transitions()[i][0])
+                exit()            
+    return out_array, in_array, in_array - out_array
+
+def vector_field_objectworld(env,trajectories):
     # size = np.int(np.sqrt(env.observation_space.n))
     # out_array = np.zeros((env.observation_space.n, 2))
     # in_array = np.zeros((env.observation_space.n, 2))

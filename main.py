@@ -15,7 +15,9 @@ from gym_objectworld.utilities import trajectory as T
 from gym_objectworld import plot as P
 from gym_objectworld.utilities import discrete as D
 
-env = ObjectWorldEnv(15, 30, 4, 0.3, False)
+size = 32
+
+env = ObjectWorldEnv(size+2, 50, 4, 0.3, False)
 
 style = {
 	'border': {'color': 'red', 'linewidth': 0.5},
@@ -61,9 +63,9 @@ h=[dx,dy]
 
 POL = V.find_policy(env, ground_r, GAMMA)
 
-ts= list(T.generate_trajectories(1, env, POL))
+ts= list(T.generate_trajectories_objectworld(3000, env, POL))
 
-tot, tot1, tot2 = T.vector_field(env,ts)
+tot, tot1, tot2 = T.vector_field_objectworld(env,ts)
 
 size = np.int(env.grid_size-2)
 
@@ -74,8 +76,8 @@ xx,yy = np.meshgrid(x,y)
 zz = xx+size*yy
 
 # print(tot)
-print(zz)
-exit()
+# print(zz)
+# exit()
 
 Fx = tot[xx+yy*size, 1]
 Fy = tot[xx+yy*size, 0]
@@ -91,11 +93,11 @@ Fy2 = tot2[xx+yy*size, 0]
 
 F= [Fx2, Fy2]
 g = divergence(F, h)
-print(g.shape)
-exit()
-print(Fx)
-print(Fy)
-exit()
+# print(g.shape)
+# exit()
+# print(Fx)
+# print(Fy)
+# exit()
 
 # Plotting
 
@@ -130,7 +132,7 @@ cbar = plt.colorbar(im, cax = cax)
 # Ground Truth
 
 ax = plt.subplot(rows,cols,4,aspect='equal',title='ground_truth')
-im = plt.imshow(ground_r.reshape((13,13)), origin='lower')
+im = plt.imshow(ground_r.reshape((size,size)), origin='lower')
 divider = make_axes_locatable(ax)
 cax = divider.append_axes("right", size="5%", pad=0.05)
 cbar = plt.colorbar(im, cax = cax)
@@ -147,15 +149,16 @@ norm_div = D.normalize(div)
 norm_val, _ = V.value_iteration(env, norm_div, GAMMA)
 norm_val = D.normalize(norm_val)
 
-ax = plt.subplot(rows,cols,5,aspect='equal',title='Normalised tTrue Value Function')
-im = plt.pcolormesh(x, y, value_func.reshape((13,13)), shading='nearest', cmap=plt.cm.get_cmap('coolwarm'))
+ax = plt.subplot(rows,cols,5,aspect='equal',title='Normalised True Value Function')
+im = plt.pcolormesh(x, y, value_func.reshape((size,size)), shading='nearest', cmap=plt.cm.get_cmap('coolwarm'))
 divider = make_axes_locatable(ax)
 cax = divider.append_axes("right", size="5%", pad=0.05)
 cbar = plt.colorbar(im, cax = cax)
 
 ax = plt.subplot(rows,cols,6,aspect='equal',title='Normalised Divergence - Pearson Coeff {}'.format(np.corrcoef(value_func, norm_val)[0,1]))
-im = plt.pcolormesh(x, y, norm_val.reshape((13,13)), shading='nearest', cmap=plt.cm.get_cmap('coolwarm'))
+im = plt.pcolormesh(x, y, norm_val.reshape((size,size)), shading='nearest', cmap=plt.cm.get_cmap('coolwarm'))
 divider = make_axes_locatable(ax)
+plt.quiver(x,y,Fx,Fy)
 cax = divider.append_axes("right", size="5%", pad=0.05)
 cbar = plt.colorbar(im, cax = cax)
 

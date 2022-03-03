@@ -65,13 +65,10 @@ POL = V.find_policy(env, reward, GAMMA)
 style = {
 	'border': {'color': 'red', 'linewidth': 0.5},
 }
-print(POL)
 
-ts= list(T.generate_trajectories(3000, env, POL))
+ts= list(T.generate_trajectories_gridworld(3000, env, POL))
 
-T.check_terminal_ratio(ts)
-
-tot, tot1, tot2 = T.vector_field(env,ts)
+tot, tot1, tot2 = T.vector_field_gridworld(env,ts)
 print(tot1)
 
 size = np.int(np.sqrt(env.observation_space.n))
