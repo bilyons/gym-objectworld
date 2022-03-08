@@ -22,6 +22,7 @@ from scipy.special import softmax
 import scipy
 import seaborn as sns
 import matplotlib.colors as colors
+import pathlib
 
 np.set_printoptions(threshold=sys.maxsize)
 np.set_printoptions(formatter={'float': lambda x: "{0:0.3f}".format(x)})
@@ -34,7 +35,6 @@ action_space = env.action_space.shape[0]
 Transition = namedtuple('Transition', ['s', 'a', 'r', 's_'])
 TrainingRecord = namedtuple('TrainingRecord', ['ep', 'reward'])
 # Train Expert AC
-
 
 train = False
 agent = AC.Agent(train)
@@ -126,19 +126,7 @@ distance_array = dist.cdist(states, states)
 size_of_neighbourhood = 1
 
 idx_array = distance_array.argsort()[:,:size_of_neighbourhood+1]
-# print(idx_array[0])
-# print(distance_array[0])
-# x= np.nonzero(distance_array<0.01)
-# x = np.logical_and(distance_array<0.1, distance_array>0.0)
-# print(np.argwhere(x))
-# exit()
-# idx_array = np.argwhere(np.logical_and(0.0<distance_array, distance_array<0.01 ))
-# print(idx_array)
 
-# r, c  = np.where(np.logical_and(distance_array<0.01, distance_array>0.0))
-# print(np.split(c, np.searchsorted(r,range(1,distance_array.shape[0]))))
-
-# exit()
 entries = []
 
 df = pd.DataFrame(raw_tuples, columns=['initial_state', 'vector'])
@@ -182,9 +170,6 @@ for j in range(len(states)):
 		x1 = df.iloc[df.iloc[j][f"Neighbour_{i}"]]['initial_state']
 		y1 = df.iloc[df.iloc[j][f"Neighbour_{i}"]]['vector']
 
-		# print(x0, x1)
-
-		# det = (x0[0]*y0[0])*(-x0[1]*y1[1])*(- x1[0]*y1[1])*(x1[1]*y1[1])
 		det = x0[0]*x1[1] - x0[1]*x1[0]
 		div = (x0[0]*y0[0] - x0[1]*y1[1] - x1[0]*y1[1] + x1[1]*y1[1])/det
 

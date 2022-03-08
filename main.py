@@ -7,7 +7,6 @@ from itertools import product
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-
 from gym_objectworld.envs import ObjectWorldEnv
 
 from gym_objectworld.solvers import value_iteration_objectworld as V

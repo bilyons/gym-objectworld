@@ -98,53 +98,37 @@ def generate_trajectories(n, env, model):
 
     return (_generate_one() for _ in range(n))
 
-# def vector_field(trajectories):
 
-#     c = 0
-#     for t in trajectories:
-#         for i in range(len(t.transitions())):
-#             initial_state = t.transitions()[i][0]
-#             if c == 0:
-#                 state_list = initial_state
-#             else:
-#                 state_list = np.vstack((state_list, initial_state))
-#             c+=1
-#     x_abs = abs(max(state_list[:,0], key = abs))
-#     x_dot_abs = abs(max(state_list[:,1], key = abs))
-#     th_abs = abs(max(state_list[:,2], key = abs))
-#     th_dot_abs = abs(max(state_list[:,3], key = abs))
+def generate_trajectory_objectworld(env, policy):
 
+    trajectory = []
 
-#     h_range = np.array((x_abs, x_dot_abs, th_abs, th_dot_abs))
-#     print(h_range)
-#     l_range = -h_range
-#     t_range = h_range - l_range
-#     n_states = (t_range)*\
-#                         np.array([20,20,200,20])
+    done = False
+    state = env.reset()
+    check = 0
+    check2 = 0
+    while not done:
+        
+        conv_state = (env.agent_pos[0]-1)*(env.grid_size-2) + (env.agent_pos[1]-1)
 
-#     n_states = np.round(n_states, 0).astype(int)+2
+        action = np.random.choice(range(env.action_space.n), p=policy[conv_state,:])
 
-#     boxes = np.zeros((n_states[0], n_states[1], n_states[2], n_states[3], 4))
-#     counts = np.zeros((n_states[0], n_states[1], n_states[2], n_states[3], 1))
+        new_state, _, done, _ = env.step(action)
 
-#     # For the vector field of continuous, loop over all trajectories
-#     for t in trajectories:
-#         for i in range(len(t.transitions())):
-#             initial_state = t.transitions()[i][0]
-#             disc_i_s = (initial_state-l_range)*\
-#                             np.array([20,20,20,20])
+        conv_new_state = (new_state[0]-1)*(env.grid_size-2) + (new_state[1]-1)
 
-#             disc_i_s = np.round(disc_i_s, 0).astype(int)+1
+        trajectory += [(state, action, new_state)]
 
-#             vector = t.transitions()[i][2] - t.transitions()[i][0]
+        state = new_state
 
-#             boxes[disc_i_s[0], disc_i_s[1], disc_i_s[2], disc_i_s[3], :] += vector
-#             counts[disc_i_s[0], disc_i_s[1], disc_i_s[2], disc_i_s[3], :] += 1
+    return Trajectory(trajectory)
 
-#     vector_array = np.divide(boxes, counts, out=np.zeros_like(boxes), where=counts!=0)
+def generate_trajectories_objectworld(n, world, policy):
 
-#     h = t_range/[20,20,200,20]
-#     return vector_array, h
+    def _generate_one():
+        return generate_trajectory_objectworld(world, policy)
+
+    return (_generate_one() for _ in range(n))
 
 def vector_field(env, trajectories):
 

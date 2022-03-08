@@ -73,3 +73,25 @@ def find_policy(env, reward, discount, eps=1e-3):
 
     return Q
 
+def policy_eval(policy, reward, env, nS, nA, discount_factor=0.9, theta=0.001):
+	"""
+	Policy Evaluation.
+	"""
+	transition_probabilities = convert_transition_array(env)
+	V = np.zeros(nS)
+	while True:
+		delta = 0
+		for s in range(nS):
+			v = 0
+			for a, a_prob in enumerate(policy[s]):
+				if a_prob == 0.0:
+					continue
+				ns_prob = transition_probabilities[s, a]
+				next_v = V[np.arange(nS)]
+				r = reward[s]
+				v += np.sum(ns_prob * a_prob * (r + discount_factor * next_v))
+			delta = max(delta, np.abs(v - V[s]))
+			V[s] = v
+		if delta < theta:
+			break
+	return np.array(V)

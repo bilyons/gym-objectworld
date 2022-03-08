@@ -788,7 +788,7 @@ class MiniGridEnv(gym.Env):
 
 		obs = self._gen_obs()
 
-		return self.agent_pos, reward, done, {}
+		return obs, reward, done, {}
 
 	def render(self, mode='human', close=False, tile_size=TILE_PIXELS):
 		"""

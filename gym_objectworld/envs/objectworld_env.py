@@ -81,12 +81,11 @@ class ObjectWorldEnv(MiniGridEnv):
             return -1
         return 0
 
-    def _gen_obs(self, state=None, discrete=True):
+    def _gen_obs(self, state=None):
         """
         Feature vector of the state continuous and discrete
         """
-
-        if state == None:
+        if state is None:
             sy, sx = self.agent_pos
         else:
             sy, sx = state
@@ -145,3 +144,30 @@ class ObjectWorldEnv(MiniGridEnv):
 
         return np.array([self._gen_obs((y,x), discrete) for 
             (y,x) in product(range(1, self.grid_size-1), range(1, self.grid_size-1))])
+
+    def reset(self):
+        # Current position and direction of the agent
+        self.agent_pos = None
+
+        # Generate a new random grid at the start of each episode
+        # To keep the same grid for each episode, call env.seed() with
+        # the same seed before calling env.reset()
+        self._gen_grid(self.grid_size)
+
+        # These fields should be defined by _gen_grid
+        assert self.agent_pos is not None
+
+        # Check that the agent doesn't overlap with an object
+        start_cell = self.grid.get(*self.agent_pos)
+        assert start_cell is None or start_cell.can_overlap()
+
+        # Item picked up, being carried, initially nothing
+        self.carrying = None
+
+        # Step count since episode start
+        self.step_count = 0
+
+        # Generate observation
+        obs = self._gen_obs(self.agent_pos)
+
+        return obs
