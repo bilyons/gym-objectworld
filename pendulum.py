@@ -115,7 +115,7 @@ def divergence(f, h):
 
 
 # Redo
-ts = list(T.generate_trajectories(3, env, agent))
+ts = list(T.generate_trajectories(50, env, agent))
 
 states, transitions = T.vector_field(env, ts)
 
@@ -173,9 +173,6 @@ for j in range(len(states)):
 		det = x0[0]*x1[1] - x0[1]*x1[0]
 		div = (x0[0]*y0[0] - x0[1]*y1[1] - x1[0]*y1[1] + x1[1]*y1[1])/det
 
-
-
-
 	# # Weighting normalize
 	# weighting = softmax(weighting)
 	# grad = np.vstack(grad)
@@ -196,7 +193,7 @@ print(df['Divergence'])
 v = df['Divergence']
 # v = ( v - v.max())/(v.max()-v.min())
 print(df.loc[df['Divergence'].idxmax()])
-
+print(v)
 # xx, yy = np.meshgrid(x,y, sparse=True)
 
 rows = 1
@@ -204,7 +201,7 @@ cols = 1
 fig = plt.figure(figsize=(10,10))
 ax = fig.add_subplot(111, projection='3d')
 ax.scatter3D(x,y,v,s=1)
-# ax.set_zlim(-5,5)
+ax.set_zlim(-10,10)
 plt.show()
 
 plt.pcolor(df)
