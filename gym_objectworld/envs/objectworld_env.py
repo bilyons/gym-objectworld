@@ -140,9 +140,9 @@ class ObjectWorldEnv(MiniGridEnv):
                 i+=1
         return state
 
-    def _feature_matrix(self, discrete=True):
+    def _feature_matrix(self):
 
-        return np.array([self._gen_obs((y,x), discrete) for 
+        return np.array([self._gen_obs((y,x)) for 
             (y,x) in product(range(1, self.grid_size-1), range(1, self.grid_size-1))])
 
     def reset(self):
@@ -170,4 +170,4 @@ class ObjectWorldEnv(MiniGridEnv):
         # Generate observation
         obs = self._gen_obs(self.agent_pos)
 
-        return obs
+        return self.agent_pos

@@ -93,6 +93,22 @@ def generate_trajectories_objectworld(n, world, policy):
 
     return (_generate_one() for _ in range(n))
 
+def convert_trajectory_style(trajectories):
+
+    t_set = []
+    for t in trajectories:
+        trajectory = []
+        for i in range(len(t.transitions())):
+            s = t.transitions()[i][0]
+            a = t.transitions()[i][1]
+            n = t.transitions()[i][2]
+
+            trajectory.append((s, a, n))
+
+        t_set.append(trajectory)
+
+    return np.array(t_set)
+
 def generate_trajectory_gridworld(env, policy):
     trajectory = []
 

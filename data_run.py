@@ -94,7 +94,11 @@ for t in range(len(num_t)):
 	if t == 0:
 		ts = list(T.generate_trajectories_objectworld(num_t[0], env, POL))
 	else:
-		ts += list(T.generate_trajectories_objectworld(num_t[t-1], env, POL))		
+		ts += list(T.generate_trajectories_objectworld(num_t[t-1], env, POL))
+
+	# Remember to add another transition array the way they like it in IQL and IAVI
+
+
 
 	print("Trajectories added")
 	# Calculate vector field
