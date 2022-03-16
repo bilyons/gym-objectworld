@@ -20,10 +20,9 @@ def inverse_q_learning(nS,nA, gamma, transitions, alpha_r, alpha_q, alpha_sh, ep
     q_sh = np.zeros((nS, nA))
     state_action_visitation = np.zeros((nS, nA))
 
-    for i in range(epochs):
-        if i%10 == 0:
-            print("Epoch %s/%s" %(i+1, epochs))
-       
+    diff = np.inf
+    while diff > 1e-4:
+        r_old = r.copy()
         for traj in transitions:
             for (s, a, ns) in traj:
                 state_action_visitation[s][a] += 1
@@ -48,6 +47,7 @@ def inverse_q_learning(nS,nA, gamma, transitions, alpha_r, alpha_q, alpha_sh, ep
                 # update value-function.
                 q[s, a] = (1-alpha_q) * q[s, a] + alpha_q * (r[s, a] + gamma * (1-d) * np.max(q[ns]))
                 s = ns
+        diff = np.max(np.abs(r_old - r))
 
     # compute Boltzmann distribution.
     boltzman_distribution = []

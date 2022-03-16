@@ -12,6 +12,7 @@ import numpy.random as rn
 np.set_printoptions(formatter={'float': lambda x: "{0:0.5f}".format(x)})
 
 from gym_objectworld.solvers import value_iteration_objectworld as V
+from gym_objectworld.solvers import optimizer as O
 
 def normalize(vals):
   """
@@ -23,7 +24,7 @@ def normalize(vals):
   max_val = np.max(vals)
   return (vals - min_val) / (max_val - min_val)
 
-def irl(env, gamma, trajectories, learning_rate, epochs, eps=1e-4):
+def irl(env, gamma, trajectories, learning_rate, eps=1e-4):
     """
     Find the reward function for the given trajectories.
 
@@ -51,10 +52,11 @@ def irl(env, gamma, trajectories, learning_rate, epochs, eps=1e-4):
     # Calculate the feature expectations \tilde{phi}.
     feature_expectations = find_feature_expectations(env,
                                                      trajectories)
-    
+    optimiser = O.Sga(lr=O.linear_decay(lr0=0.1))
     # Gradient descent on alpha.
     delta = np.inf
-    for _ in range(epochs):
+    optimiser.reset(alpha)
+    while delta > eps:
         alpha_old = alpha.copy()
 
         r = feature_matrix.dot(alpha)
@@ -63,8 +65,10 @@ def irl(env, gamma, trajectories, learning_rate, epochs, eps=1e-4):
         grad = feature_expectations - feature_matrix.T.dot(expected_svf)
 
         alpha += (learning_rate*grad)
+        optimiser.step(grad)
 
         delta = np.max(np.abs(alpha_old - alpha))
+        print(delta)
     return feature_matrix.dot(alpha).reshape((n_states,))
 
 def find_svf(n_states, trajectories):

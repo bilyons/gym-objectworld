@@ -25,7 +25,8 @@ def inverse_action_value_iteration(nS, nA, gamma, transition_probabilities, acti
 
     # do while change in r over iterations is larger than theta.
     diff = np.inf
-    for i in range(epochs):
+    while diff > theta:
+        diff = 0
         for t in T[0:]:
             for i in t:
                 # compute coefficient matrix X_A(s) as in Eq. (9).
