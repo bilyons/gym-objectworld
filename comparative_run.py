@@ -33,7 +33,7 @@ env = ObjectWorldEnv(size+2, 64, 4, 0.3, False)
 transition_matrix = V.convert_transition_array(env)
 
 # Set hyper parameters
-GAMMA = 0.99
+GAMMA = 0.9
 
 # Define divergence function
 def divergence(f, h):

@@ -18,7 +18,7 @@ def normalize(vals):
 	return (vals - min_val) / (max_val - min_val)
 
 # Main call - Not working yet - why?
-def m_irl(env, trajectories, lr):
+def irl(env, trajectories, lr):
 
 	feature_matrix = env._feature_matrix()
 	n_states, n_features = feature_matrix.shape
@@ -67,7 +67,7 @@ def local_action_probability(action_dim, feature_matrix, transition_prob, reward
 	z_action = np.zeros((n_states, n_actions))
 	p_transition = np.copy(transition_prob)
 
-	p = [np.array(world.transition_prob[:, a, :]) for a in range(n_actions)]
+	p = [np.array(transition_prob[:, a, :]) for a in range(n_actions)]
 	er = np.exp(rewards)*np.eye((n_states))
 
 	zs = np.zeros(n_states)
@@ -109,6 +109,8 @@ def feature_expectations(feature_matrix, trajectories):
 
 	for t in trajectories:
 		for i in range(len(t.transitions())):
+			print(feature_matrix[t.transitions()[i][0]])
+			exit()
 			fe += feature_matrix[t.transitions()[i][0]]
 	return fe/len(trajectories)
 

@@ -52,10 +52,8 @@ def irl(env, gamma, trajectories, learning_rate, eps=1e-4):
     # Calculate the feature expectations \tilde{phi}.
     feature_expectations = find_feature_expectations(env,
                                                      trajectories)
-    optimiser = O.Sga(lr=O.linear_decay(lr0=0.1))
     # Gradient descent on alpha.
     delta = np.inf
-    optimiser.reset(alpha)
     while delta > eps:
         alpha_old = alpha.copy()
 
@@ -65,8 +63,7 @@ def irl(env, gamma, trajectories, learning_rate, eps=1e-4):
         grad = feature_expectations - feature_matrix.T.dot(expected_svf)
 
         alpha += (learning_rate*grad)
-        optimiser.step(grad)
-
+        
         delta = np.max(np.abs(alpha_old - alpha))
         print(delta)
     return feature_matrix.dot(alpha).reshape((n_states,))
