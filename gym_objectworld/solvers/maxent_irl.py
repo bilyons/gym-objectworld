@@ -51,7 +51,7 @@ def irl(env, trajectories, lr):
 		optimiser.step(grad)
 
 		delta = np.max(np.abs(theta_old - theta))
-		print(delta)
+
 	return normalize(feature_matrix.dot(theta))
 
 # Expected state visitatoin

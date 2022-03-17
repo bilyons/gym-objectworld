@@ -23,7 +23,7 @@ random.seed(0)
 np.random.seed(0)
 
 # Set size
-size = 10
+size = 32
 n_states = int(size**2)
 n_actions = 5
 
@@ -95,13 +95,13 @@ num_t = [1,2,4,8,16,32,64,128,256,512,1024]
 # for run in range(0,5):
 df = pd.DataFrame(columns=["Number of Trajectories", "EVD VAIRL", "EVD IAVI", "EVD IQL", "EVD MAXENT", "PR VAIRL", "PR IAVI", "PR True IAVI", "PR Maxent", "PR IQL", "PR True IQL", "Runtime VAIRL", "Runtime IAVI", "Runtime IQL", "Runtime AP", "Runtime Maxent"]) 
 
-run = 0
+run = 4
 random.seed(run)
 np.random.seed(run)
 for t in range(len(num_t)):
 	# Add trajectories
 	if t == 0:
-		ts = list(T.generate_trajectories_objectworld(100, env, POL))
+		ts = list(T.generate_trajectories_objectworld(1, env, POL))
 	else:
 		ts += list(T.generate_trajectories_objectworld(num_t[t-1], env, POL))
 
@@ -118,7 +118,7 @@ for t in range(len(num_t)):
 	end = time.time()
 	a_p_time = end - start
 	print("Trajectories added")
-	# Calculate vector field
+	# Calculate vector fiel
 
 	# VAIRL Loop ########################################################################################
 	start = time.time()
@@ -143,21 +143,20 @@ for t in range(len(num_t)):
 	# Evaluate VAIRL
 	div = g.ravel()
 	# Normalise divergence rewards
-	norm_div = D.normalize(div)
+	# norm_div = D.normalize(div)
 	# Calculate value based on this reward
-	norm_val, _ = V.value_iteration(env, norm_div, GAMMA)
+	norm_val, _ = V.value_iteration(env, div, GAMMA)
 	# Calculate policy as if the reward you have is true
-	learned_pol = V.find_policy(env, norm_div, GAMMA)
+	learned_pol = V.find_policy(env, div, GAMMA)
 	# Compare
 	v_learned = V.policy_eval(learned_pol, ground_r, env, np.int(size**2), 5)
 	# Time Check
 	t_vairl = end-start
 	# Correlation check
-	pr_vairl = np.corrcoef(v_true, norm_val)[0,1]
+	pr_vairl = np.corrcoef(value_func, norm_val)[0,1]
 
 	print(f"VAIRL Complete {t_vairl}")
 	print(f"EVD VAIRL: {np.square(v_true - v_learned).mean()} PR: VAIRL: {pr_vairl}")
-
 	#######################################################################################################
 	# IQL Loop
 	start = time.time()
@@ -169,11 +168,11 @@ for t in range(len(num_t)):
 	# Evaluate IQL
 	v_iql = V.policy_eval(boltz, ground_r, env, np.int(size**2), 5)
 	v_q_iql = np.amax(q, axis= 1)
-	pr_iql = np.corrcoef(v_true, v_iql)[0,1]
+	pr_iql = np.corrcoef(value_func, v_iql)[0,1]
 	pr_q_iql = np.corrcoef(v_true, v_q_iql)[0,1]
 
 	print(f"IQL Complete {t_iql}")
-	print(f"EVD iql: {np.square(v_true - v_iql).mean()} PR: iql: {pr_iql}")
+	print(f"EVD iql: {np.square(v_true - v_iql).mean()} PR: iql: {pr_q_iql}")
 
 	# End IQL Loop
 	#######################################################################################################
@@ -183,7 +182,7 @@ for t in range(len(num_t)):
 	end = time.time()
 	v_iavi = V.policy_eval(boltz, ground_r, env, np.int(size**2), 5)
 	v_q_iavi = np.amax(q, axis= 1)
-	pr_iavi = np.corrcoef(v_true, v_iavi)[0,1]
+	pr_iavi = np.corrcoef(value_func, v_iavi)[0,1]
 	pr_q_iavi = np.corrcoef(v_true, v_q_iavi)[0,1]
 	
 	# Evaluate IAVI
@@ -191,25 +190,25 @@ for t in range(len(num_t)):
 	# End IAVI Loop
 	t_iavi = end - start
 	print(f"IAVI Complete {t_iavi}")
-	print(f"EVD iavi: {np.square(v_true - v_iavi).mean()} PR: iavi: {pr_iavi}")
+	print(f"EVD iavi: {np.square(v_true - v_iavi).mean()} PR: iavi: {pr_q_iavi}")
 
 	# Maxent Loop
 	start = time.time()
 	r = maxent.irl(env, GAMMA, ts, 0.01)
 	end = time.time()
 	t_maxent = end-start
-	norm_r = D.normalize(r)
 	# Calculate value based on this reward
-	maxent_val, _ = V.value_iteration(env, norm_r, GAMMA)
+	maxent_val, _ = V.value_iteration(env, r, GAMMA)
 
-	learned_pol = V.find_policy(env, norm_r, GAMMA)
+	learned_pol = V.find_policy(env, r, GAMMA)
 	# Compare
 	v_maxent = V.policy_eval(learned_pol, ground_r, env, np.int(size**2), 5)
 	t_vairl = end-start
 	# Correlation check
-	pr_maxent = np.corrcoef(v_true, maxent_val)[0,1]
+	pr_maxent = np.corrcoef(value_func, maxent_val)[0,1]
 	print(f"Maxent Complete Complete {t_maxent}")
 	print(f"EVD Maxent: {np.square(v_true - v_maxent).mean()} PR: Maxent: {pr_maxent}")
+
 	df.loc[ np.int(t+run*len(num_t)) ] = [ num_t[t], np.square(v_true - v_learned).mean() , np.square(v_true - v_iavi).mean(), np.square(v_true - v_iql).mean(), np.square(v_true - v_maxent).mean(), \
 																pr_vairl, pr_iavi, pr_q_iavi, pr_iql, pr_q_iql , pr_maxent, \
 																t_vairl, t_iavi, t_iql, a_p_time, t_maxent ]
