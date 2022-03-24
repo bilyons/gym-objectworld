@@ -24,7 +24,7 @@ def normalize(vals):
   max_val = np.max(vals)
   return (vals - min_val) / (max_val - min_val)
 
-def irl(env, gamma, trajectories, learning_rate, eps=1e-3):
+def irl(env, gamma, trajectories, learning_rate, eps=1e-4):
     """
     Find the reward function for the given trajectories.
 
