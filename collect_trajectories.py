@@ -77,6 +77,12 @@ filehandler = open(os.path.abspath(os.getcwd())+"/trajectories/value_func.pkl", 
 pickle.dump(value_func, filehandler)
 filehandler.close()
 
+# Save value function
+filehandler = open(os.path.abspath(os.getcwd())+"/trajectories/v_true.pkl", "wb")
+pickle.dump(v_true, filehandler)
+filehandler.close()
+
+
 for t_set in range(5):
 
 	ts = list(T.generate_trajectories_objectworld(num_t, env, policy))

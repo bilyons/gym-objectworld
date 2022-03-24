@@ -19,12 +19,15 @@ from gym_objectworld.solvers import maxent
 import time
 import pandas as pd
 import pickle
-
+np.set_printoptions(threshold=sys.maxsize)
 size = 32
 n_states = int(size**2)
 n_actions = 5
 gamma = 0.9
 # Open env
+# Generate linear space grid
+x = np.linspace(0, size-1, size, dtype=np.int64)
+y = np.linspace(0, size-1, size, dtype=np.int64)
 file = open(os.path.abspath(os.getcwd())+"/trajectories/env.pkl",'rb')
 env = pickle.load(file)
 file.close()
@@ -38,20 +41,11 @@ file.close()
 file = open(os.path.abspath(os.getcwd())+"/trajectories/value_func.pkl",'rb')
 value_func = pickle.load(file)
 file.close()
-# Generate linear space grid
-x = np.linspace(0, size-1, size, dtype=np.int64)
-y = np.linspace(0, size-1, size, dtype=np.int64)
-xx,yy = np.meshgrid(x,y)
-# Set up meshgrid
-NY = env.grid_size-2
-NX = NY
-ymin = 0
-ymax = env.grid_size-2
-xmin = 0
-xmax = env.grid_size-2
-dx = (xmax -xmin)/(NX-1.)
-dy = (ymax -ymin)/(NY-1.)
-h=[dx,dy]
+
+file = open(os.path.abspath(os.getcwd())+"/trajectories/v_true.pkl",'rb')
+v_true = pickle.load(file)
+file.close()
+
 
 num_t = [1,2,4,8,16,32,64,128,256,512,1024]
 
@@ -61,7 +55,7 @@ def divergence(f, h):
 	return np.ufunc.reduce(np.add, [np.gradient(f[i], h[i],axis=i) for i in range(num_dims)])
 
 for i in range(5):
-	df = pd.DataFrame(columns=["Number of Trajectories", "EVD VAIRL", "PR VAIRL", "Runtime VAIRL", "Runtime IAVI"])
+	df = pd.DataFrame(columns=["Number of Trajectories", "EVD IQL", "PR IQL", "PR True IQL", "PR Reward IQL", "Runtime IQL"])
 
 	# Load trajectories
 	file = open(os.path.abspath(os.getcwd())+"/trajectories/t_set_{}".format(i),'rb')
@@ -72,62 +66,55 @@ for i in range(5):
 
 		trajectories = ts[:num_t[t]]
 
+		action_probabilities = np.zeros((n_states, n_actions))
+		t_alternate = T.convert_trajectory_style(trajectories)
+		for traj in t_alternate:
+			for (s, a, ns) in traj:
+				action_probabilities[s][a] += 1
+		action_probabilities[action_probabilities.sum(axis=1)==0] = 1e-5
+		action_probabilities/=action_probabilities.sum(axis=1).reshape(n_states,1)
+		
+		# IQL Loop
 		start = time.time()
-		tot, tot1, tot2 = T.vector_field_objectworld(env, trajectories)
+		q, r, boltz = iql.inverse_q_learning(n_states, n_actions,  gamma, t_alternate, \
+	                                         alpha_r=0.0001, alpha_q=0.01, alpha_sh=0.01, epochs=100, real_distribution=action_probabilities)
 
-		# Get outputs of vector field
-		Fx = tot[xx+yy*size, 1]
-		Fy = tot[xx+yy*size, 0]
+		print(q)
 
-		Fx1 = tot1[xx+yy*size, 1]
-		Fy1 = tot1[xx+yy*size, 0]
-
-		Fx2 = tot2[xx+yy*size, 1]
-		Fy2 = tot2[xx+yy*size, 0]
-
-		# Calculate divergence
-		F= [Fx2, Fy2]
-		g = divergence(F, h)
+		exit()
 		end = time.time()
-		# End VAIRL loop
 
-		# Evaluate VAIRL
-		div = g.ravel()
-		# Calculate value based on this reward
-		norm_val, _ = V.value_iteration(env, div, gamma)
-		# Calculate policy as if the reward you have is true
-		learned_pol = V.find_policy(env, div, gamma)
-		# Compare
-		v_learned = V.policy_eval(learned_pol, ground_r, env, np.int(size**2), 5)
-		# Time Check
-		t_vairl = end-start
-		# Correlation check
-		pr_vairl = np.corrcoef(value_func, norm_val)[0,1]
+		t_iql = end - start
+		# Evaluate IQL
+		v_iql = V.policy_eval(boltz, ground_r, env, np.int(size**2), 5)
+		v_q_iql = np.amax(q, axis= 1)
+		pr_iql = np.corrcoef(value_func, v_iql)[0,1]
+		pr_q_iql = np.corrcoef(v_true, v_q_iql)[0,1]
+		pr_r_iql = np.corrcoef(np.amax(r, axis=1), ground_r)[0,1]
 
-		print(f"VAIRL Complete {t_vairl}")
-		print(f"EVD VAIRL: {np.square(v_true - v_learned).mean()} PR: VAIRL: {pr_vairl}")
+		print(f"IQL Complete {t_iql}")
+		print(f"EVD iql: {np.square(v_true - v_iql).mean()} PR: iql: {pr_q_iql}")
 
-		# Plot Normalized divergence
-		ax = plt.subplot(111,aspect='equal',title='Divergence Value Function')
-		im = plt.pcolormesh(x, y, norm_val.reshape((size,size)), shading='nearest', cmap=plt.cm.get_cmap('coolwarm'))
-		divider = make_axes_locatable(ax)
-		plt.quiver(x,y,Fx2,Fy2)
-		cax = divider.append_axes("right", size="5%", pad=0.05)
-		cbar = plt.colorbar(im, cax = cax)
-
-		plt.savefig(os.path.abspath(os.getcwd())+"/img/ow_img/{}/{}/quiver_div_value_after_{}_trajectories_run_{}.png".format(epochs, run,len(ts), run))
-		plt.clf()
-
-		ax = plt.subplot(111,aspect='equal',title='Divergence Value Function')
-		im = plt.pcolormesh(x, y, norm_val.reshape((size,size)), shading='nearest', cmap=plt.cm.get_cmap('coolwarm'))
+		# Plot 
+		ax = plt.subplot(111,aspect='equal',title='IQL Value Function')
+		im = plt.pcolormesh(x, y, v_iql.reshape((size,size)), shading='nearest', cmap=plt.cm.get_cmap('coolwarm'))
 		divider = make_axes_locatable(ax)
 		cax = divider.append_axes("right", size="5%", pad=0.05)
 		cbar = plt.colorbar(im, cax = cax)
 
-		plt.savefig(os.path.abspath(os.getcwd())+"/img/ow_img/{}/{}/div_value_after_{}_trajectories_evd_{}.png".format(epochs, run, len(ts),  run))
+		plt.savefig(os.path.abspath(os.getcwd())+"/img/ow_img/{}/iql_value_after_{}_trajectories.png".format(i, len(trajectories)))
 		plt.clf()
 
-		df.loc[ np.int(t+run*len(num_t)) ] = [ num_t[t], np.square(v_true - v_learned).mean(), pr_vairl, t_vairl]
+		ax = plt.subplot(111,aspect='equal',title='True IQL Value Function')
+		im = plt.pcolormesh(x, y, v_q_iql.reshape((size,size)), shading='nearest', cmap=plt.cm.get_cmap('coolwarm'))
+		divider = make_axes_locatable(ax)
+		cax = divider.append_axes("right", size="5%", pad=0.05)
+		cbar = plt.colorbar(im, cax = cax)
 
-	df.to_csv(os.path.abspath(os.getcwd())+'/data/{}/vairl.csv'.format(t_set), index=False)
+		plt.savefig(os.path.abspath(os.getcwd())+"/img/ow_img/{}/true_iql_value_after_{}_trajectories.png".format(i, len(trajectories)))
+		plt.clf()
+
+		df.loc[ t ] = [ num_t[t], np.square(v_true - v_iql).mean(), pr_iql, pr_q_iql, pr_r_iql, t_iql]
+
+	df.to_csv(os.path.abspath(os.getcwd())+'/data/{}/iql.csv'.format(i), index=False)
 	del [df]

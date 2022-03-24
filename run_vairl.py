@@ -38,6 +38,11 @@ file.close()
 file = open(os.path.abspath(os.getcwd())+"/trajectories/value_func.pkl",'rb')
 value_func = pickle.load(file)
 file.close()
+
+file = open(os.path.abspath(os.getcwd())+"/trajectories/v_true.pkl",'rb')
+v_true = pickle.load(file)
+file.close()
+
 # Generate linear space grid
 x = np.linspace(0, size-1, size, dtype=np.int64)
 y = np.linspace(0, size-1, size, dtype=np.int64)
@@ -61,7 +66,7 @@ def divergence(f, h):
 	return np.ufunc.reduce(np.add, [np.gradient(f[i], h[i],axis=i) for i in range(num_dims)])
 
 for i in range(5):
-	df = pd.DataFrame(columns=["Number of Trajectories", "EVD VAIRL", "PR VAIRL", "Runtime VAIRL", "Runtime IAVI"])
+	df = pd.DataFrame(columns=["Number of Trajectories", "EVD VAIRL", "PR VAIRL", "PR Reward", "Runtime VAIRL"])
 
 	# Load trajectories
 	file = open(os.path.abspath(os.getcwd())+"/trajectories/t_set_{}".format(i),'rb')
@@ -103,7 +108,7 @@ for i in range(5):
 		t_vairl = end-start
 		# Correlation check
 		pr_vairl = np.corrcoef(value_func, norm_val)[0,1]
-
+		pr_vairl_reward = np.corrcoef(div, ground_r)[0,1]
 		print(f"VAIRL Complete {t_vairl}")
 		print(f"EVD VAIRL: {np.square(v_true - v_learned).mean()} PR: VAIRL: {pr_vairl}")
 
@@ -115,7 +120,7 @@ for i in range(5):
 		cax = divider.append_axes("right", size="5%", pad=0.05)
 		cbar = plt.colorbar(im, cax = cax)
 
-		plt.savefig(os.path.abspath(os.getcwd())+"/img/ow_img/{}/{}/quiver_div_value_after_{}_trajectories_run_{}.png".format(epochs, run,len(ts), run))
+		plt.savefig(os.path.abspath(os.getcwd())+"/img/ow_img/{}/quiver_div_value_after_{}_trajectories.png".format(i, len(trajectories)))
 		plt.clf()
 
 		ax = plt.subplot(111,aspect='equal',title='Divergence Value Function')
@@ -124,10 +129,10 @@ for i in range(5):
 		cax = divider.append_axes("right", size="5%", pad=0.05)
 		cbar = plt.colorbar(im, cax = cax)
 
-		plt.savefig(os.path.abspath(os.getcwd())+"/img/ow_img/{}/{}/div_value_after_{}_trajectories_evd_{}.png".format(epochs, run, len(ts),  run))
+		plt.savefig(os.path.abspath(os.getcwd())+"/img/ow_img/{}/div_value_after_{}_trajectories.png".format(i, len(trajectories)))
 		plt.clf()
 
-		df.loc[ np.int(t+run*len(num_t)) ] = [ num_t[t], np.square(v_true - v_learned).mean(), pr_vairl, t_vairl]
+		df.loc[ t ] = [ num_t[t], np.square(v_true - v_learned).mean(), pr_vairl, pr_vairl_reward, t_vairl]
 
-	df.to_csv(os.path.abspath(os.getcwd())+'/data/{}/vairl.csv'.format(t_set), index=False)
+	df.to_csv(os.path.abspath(os.getcwd())+'/data/{}/vairl.csv'.format(i), index=False)
 	del [df]
