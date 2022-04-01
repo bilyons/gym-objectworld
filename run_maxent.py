@@ -24,7 +24,7 @@ np.set_printoptions(threshold=sys.maxsize)
 size = 32
 n_states = int(size**2)
 n_actions = 5
-gamma = 0.9
+gamma = 0.99
 # Open env
 # Generate linear space grid
 x = np.linspace(0, size-1, size, dtype=np.int64)
@@ -51,15 +51,14 @@ file.close()
 num_t = [1,2,4,8,16,32,64,128,256,512,1024]
 
 # for i in range(5):
-df = pd.DataFrame(columns=["Number of Trajectories", "EVD MaxEnt", "PR MaxEnt", "PR True MaxEnt", "PR Reward MaxEnt", "Runtime MaxEnt"])
+df = pd.DataFrame(columns=["Number of Trajectories", "EVD MaxEnt", "PR MaxEnt", "PR Reward MaxEnt", "Runtime MaxEnt"])
 
 # Load trajectories
 i=4
-
 file = open(os.path.abspath(os.getcwd())+"/trajectories/t_set_{}".format(i),'rb')
 ts = pickle.load(file)
 file.close()
-
+env.discrete = True
 
 
 for t in range(len(num_t)):
@@ -85,7 +84,17 @@ for t in range(len(num_t)):
 
 	# Plot 
 	ax = plt.subplot(111,aspect='equal',title='MaxEnt Value Function')
-	im = plt.pcolormesh(x, y, v_iql.reshape((size,size)), shading='nearest', cmap=plt.cm.get_cmap('coolwarm'))
+	im = plt.pcolormesh(x, y, v_maxent.reshape((size,size)), shading='nearest', cmap=plt.cm.get_cmap('coolwarm'))
+	divider = make_axes_locatable(ax)
+	cax = divider.append_axes("right", size="5%", pad=0.05)
+	cbar = plt.colorbar(im, cax = cax)
+
+	plt.savefig(os.path.abspath(os.getcwd())+"/img/ow_img/{}/evd_maxent_value_after_{}_trajectories.png".format(i, len(trajectories)))
+	plt.clf()
+
+	# Plot 
+	ax = plt.subplot(111,aspect='equal',title='True MaxEnt Value Function')
+	im = plt.pcolormesh(x, y, maxent_val.reshape((size,size)), shading='nearest', cmap=plt.cm.get_cmap('coolwarm'))
 	divider = make_axes_locatable(ax)
 	cax = divider.append_axes("right", size="5%", pad=0.05)
 	cbar = plt.colorbar(im, cax = cax)
@@ -93,7 +102,7 @@ for t in range(len(num_t)):
 	plt.savefig(os.path.abspath(os.getcwd())+"/img/ow_img/{}/maxent_value_after_{}_trajectories.png".format(i, len(trajectories)))
 	plt.clf()
 
-	df.loc[ t ] = [ num_t[t], np.square(v_true - v_iql).mean(), pr_iql, pr_q_iql, pr_maxent_reward, t_iql]
+	df.loc[ t ] = [ num_t[t], np.square(v_true - v_maxent).mean(), pr_maxent, pr_maxent_reward, t_maxent]
 
-df.to_csv(os.path.abspath(os.getcwd())+'/data/{}/iql.csv'.format(i), index=False)
+df.to_csv(os.path.abspath(os.getcwd())+'/data/{}/maxent.csv'.format(i), index=False)
 del [df]

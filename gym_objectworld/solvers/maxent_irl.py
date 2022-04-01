@@ -4,102 +4,112 @@ Contains multiple methods of performing inverse reinforcement learning for analy
 import numpy as np
 from time import sleep
 from gym_objectworld.solvers import value_iteration_objectworld as V
-from gym_objectworld.solvers import optimizer as O
-# Max Ent IRL ###########################################################################
-
-def normalize(vals):
-	"""
-	normalize to (0, max_val)
-	input:
-	vals: 1d array
-	"""
-	min_val = np.min(vals)
-	max_val = np.max(vals)
-	return (vals - min_val) / (max_val - min_val)
-
+from gym_objectworld.utilities import discrete as D
+from itertools import product
 # Main call - Not working yet - why?
-def irl(env, trajectories, lr):
+def irl(env, trajectories, lr, gamma, transition_prob):
 
 	feature_matrix = env._feature_matrix()
 	n_states, n_features = feature_matrix.shape
 	n_actions = env.action_space.n
-	p_transition = V.convert_transition_array(env)
-
+	
 	delta = np.inf
-	eps=1e-5
+	theta = np.random.rand(n_features)
 
-	theta = np.random.rand(n_states)
-
-	print(feature_matrix)
 	e_features = feature_expectations(feature_matrix, trajectories)
 	p_initial = initial_probabilities(feature_matrix, trajectories)
 
-	optimiser = O.ExpSga(lr=O.linear_decay(lr0=0.1))
-
-	optimiser.reset(theta)
-	while delta > eps:
+	t=1
+	eps = 1e-4
+	while t<=100:
 		theta_old = theta.copy()
 
 		# Per state reward
 		r  = feature_matrix.dot(theta) # Essentially just alpha but could have different features
 
+		# Find policy based on r
+		policy = V.find_policy(env, r, gamma)
 		# Backwards pass
-		e_svf = expected_svf(action_dim, feature_matrix, transition_prob, p_initial, r)
 
-		grad = e_features - features_matrix.T.dot(e_svf)
+		# policy = causal_expectations(transition_prob, r, gamma, eps=1e-4)
 
-		optimiser.step(grad)
+		e_svf = find_expected_svf(env, r, gamma, trajectories)
+
+		grad = e_features - feature_matrix.T.dot(e_svf)
+
+		theta += lr*grad
+
+		# theta = D.normalize(theta)
 
 		delta = np.max(np.abs(theta_old - theta))
 
-	return normalize(feature_matrix.dot(theta))
+		print("main delta ",delta, t)
+
+		t+=1
+
+		# print(feature_matrix.dot(theta).reshape((32,32)))
+
+	return feature_matrix.dot(theta), policy
 
 # Expected state visitatoin
 
-def expected_svf(action_dim, feature_matrix, transition_prob, p_initial, rewards):
-	p_action = local_action_probability(action_dim, feature_matrix, transition_prob, rewards)
-	return expected_svf_from_policy(action_dim, feature_matrix, transition_prob, p_initial, p_action)
 
-def local_action_probability(action_dim, feature_matrix, transition_prob, rewards):
-	n_states, _ = feature_matrix.shape
-	n_actions = action_dim
-	z_states = np.zeros((n_states))
-	z_action = np.zeros((n_states, n_actions))
-	p_transition = np.copy(transition_prob)
+def find_expected_svf(env, r, gamma, trajectories):
+    n_trajectories = len(trajectories)
+    trajectory_length = 9
+
+    n_states, _ = env._feature_matrix().shape
+    n_actions = env.action_space.n
+    transition_probability = V.convert_transition_array(env)
+
+    # policy = find_policy(n_states, r, n_actions, gamma,
+    #                                 transition_probability)
+    policy = V.find_policy(env, r, gamma)
+
+    start_state_count = np.zeros(n_states)
+    for trajectory in trajectories:
+        start_state_count[trajectory.transitions()[0][0]] += 1
+    p_start_state = start_state_count/n_trajectories
+
+    expected_svf = np.tile(p_start_state, (trajectory_length, 1)).T
+    for t in range(1, trajectory_length):
+        expected_svf[:, t] = 0
+        for i, j, k in product(range(n_states), range(n_actions), range(n_states)):
+            expected_svf[k, t] += (expected_svf[i, t-1] *
+                                  policy[i, j] * # Stochastic policy
+                                  transition_probability[i, j, k])
+
+    return expected_svf.sum(axis=1)
+
+def causal_expectations(transition_prob, reward, discount, eps=1e-4):
+	n_states, n_actions, _ = transition_prob.shape
+
+	reward_terminal = -np.inf * np.ones(n_states)
 
 	p = [np.array(transition_prob[:, a, :]) for a in range(n_actions)]
-	er = np.exp(rewards)*np.eye((n_states))
 
-	zs = np.zeros(n_states)
-	za = np.zeros((n_states, n_actions))
-
-	for _ in range(2 * n_states):
-		for a in range(n_actions):
-			za[:,a] = np.matmul(er, np.matmul(p_transition[:,a,:], zs.T))
-		zs = za.sum(axis=1)
-	return za / zs[:, None]
-
-def expected_svf_from_policy(action_dim, feature_matrix, transition_prob, p_initial, p_action, eps = 1e-5):
-	n_states, _ = feature_matrix.shape
-	n_actions = action_dim
-	p_transition = np.copy(transition_prob)
-
-	p_transition = [np.array(p_transition[:,a,:]) for a in range(n_actions)]
-
-	# print(p_action)
-	# forward computation of state expectations
-	d = np.zeros(n_states)
+	v = -1e200 * np.ones(n_states)
 
 	delta = np.inf
+	while delta >eps:
+		v_old = v
 
-	while delta > eps:
-		# print([p_transition[a].T.dot(p_action[:, a] * d) for a in range(n_actions)])
-		d_ = [p_transition[a].T.dot(p_action[:, a] * d) for a in range(n_actions)]
-		d_ = p_initial + np.array(d_).sum(axis=0)
-		delta, d = np.max(np.abs(d_ - d)), d_
-		# print(delta)
-	return d
+		q = np.array([reward + discount * p[a].dot(v_old) for a in range(n_actions)]).T
 
+		v = reward_terminal
+		for a in range(n_actions):
+			v = softmax(v, q[:, a])
+
+		# for some reason numpy chooses an array of objects after reduction, force floats here
+		v = np.array(v, dtype=np.float)
+
+		delta = np.max(np.abs(v - v_old))
+
+		# print("d causal ", delta)
+
+	# compute and return policy
+	return np.exp(q - v[:, None])
+	
 # Functions for everyone ###############################################################
 
 def feature_expectations(feature_matrix, trajectories):
@@ -108,10 +118,8 @@ def feature_expectations(feature_matrix, trajectories):
 	fe = np.zeros(n_features)
 
 	for t in trajectories:
-		for i in range(len(t.transitions())):
-			print(feature_matrix[t.transitions()[i][0]])
-			exit()
-			fe += feature_matrix[t.transitions()[i][0]]
+		for i in t.states():
+			fe += feature_matrix[i,:]
 	return fe/len(trajectories)
 
 def initial_probabilities(feature_matrix, trajectories):
@@ -123,3 +131,21 @@ def initial_probabilities(feature_matrix, trajectories):
 	for t in trajectories:
 		p[t.transitions()[0][0]] += 1.0
 	return p/len(trajectories)
+
+def softmax(x1, x2):
+    """
+    Computes a soft maximum of both arguments.
+
+    In case `x1` and `x2` are arrays, computes the element-wise softmax.
+
+    Args:
+        x1: Scalar or ndarray.
+        x2: Scalar or ndarray.
+
+    Returns:
+        The soft maximum of the given arguments, either scalar or ndarray,
+        depending on the input.
+    """
+    x_max = np.maximum(x1, x2)
+    x_min = np.minimum(x1, x2)
+    return x_max + np.log(1.0 + np.exp(x_min - x_max))
