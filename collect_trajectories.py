@@ -55,7 +55,7 @@ plt.savefig(os.path.abspath(os.getcwd())+"/img/ow_img/ground_truth.png")
 plt.clf()
 # Value Function
 value_func, _ = V.value_iteration(env, ground_r, gamma)
-v_true = V.policy_eval(policy, ground_r, env, np.int(size**2), 5)
+v_true = V.policy_eval(policy, ground_r, env, np.int(size**2), 5, gamma)
 # value_func = D.normalize(value_func)
 
 ax = plt.subplot(111,aspect='equal',title='Normalised True Value Function')

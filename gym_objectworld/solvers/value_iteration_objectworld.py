@@ -73,7 +73,7 @@ def find_policy(env, reward, discount, eps=1e-3):
 
     return Q
 
-def policy_eval(policy, reward, env, nS, nA, discount_factor=0.99, theta=0.001):
+def policy_eval(policy, reward, env, nS, nA, discount_factor=0.90, theta=0.001):
 	"""
 	Policy Evaluation.
 	"""

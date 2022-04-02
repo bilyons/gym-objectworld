@@ -82,7 +82,7 @@ for i in range(5):
 
 		t_iavi = end - start
 		# Evaluate IAVI
-		v_iavi = V.policy_eval(boltz, ground_r, env, np.int(size**2), 5)
+		v_iavi = V.policy_eval(boltz, ground_r, env, np.int(size**2), 5, gamma)
 		v_q_iavi = np.amax(q, axis= 1)
 		pr_iavi = np.corrcoef(value_func, v_iavi)[0,1]
 		pr_q_iavi = np.corrcoef(v_true, v_q_iavi)[0,1]

@@ -103,7 +103,7 @@ for i in range(5):
 		# Calculate policy as if the reward you have is true
 		learned_pol = V.find_policy(env, div, gamma)
 		# Compare
-		v_learned = V.policy_eval(learned_pol, ground_r, env, np.int(size**2), 5)
+		v_learned = V.policy_eval(learned_pol, ground_r, env, np.int(size**2), 5, gamma)
 		# Time Check
 		t_vairl = end-start
 		# Correlation check
