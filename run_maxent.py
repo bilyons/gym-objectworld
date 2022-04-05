@@ -24,7 +24,7 @@ np.set_printoptions(threshold=sys.maxsize)
 size = 32
 n_states = int(size**2)
 n_actions = 5
-gamma = 0.99
+gamma = 0.90
 # Open env
 # Generate linear space grid
 x = np.linspace(0, size-1, size, dtype=np.int64)
