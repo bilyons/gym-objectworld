@@ -110,7 +110,7 @@ if train == True:
 	ax2.set_ylabel('Episode Length')
 	plt.show()
 	env.close()
-exit()
+
 def divergence(f, h):
 	num_dims = len(f)
 	return np.ufunc.reduce(np.add, [np.gradient(f[i], h[i],axis=i) for i in range(num_dims)])
