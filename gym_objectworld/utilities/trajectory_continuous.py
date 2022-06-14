@@ -2,6 +2,11 @@
 Trajectories representing expert demonstrations and automated generation
 thereof.
 """
+import torch
+import torch.nn as nn
+import torch.optim as optim
+import torch.nn.functional as F
+import torch.distributions as distributions
 
 import numpy as np
 from itertools import chain
@@ -70,22 +75,17 @@ def generate_trajectory(env, model):
 
     done = False
     state = env.reset()
-    d_state = np.array([ (np.arctan2(state[1], state[0])), state[2] ] )
+
     t=0
     while not done:
         
-
         action = model.select_action(state)
 
         new_state, _, done, _ = env.step(action)
 
-        n_d_state = np.array([np.arctan2(new_state[1], new_state[0]), new_state[2]])
-
-        trajectory += [(d_state, action, n_d_state)]
+        trajectory += [(state[0:2], action, new_state[0:2])]
 
         state = new_state
-
-        d_state = n_d_state
 
         t+= 1
 

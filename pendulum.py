@@ -23,7 +23,9 @@ import scipy
 import seaborn as sns
 import matplotlib.colors as colors
 import pathlib
-
+import pickle
+from scipy.optimize import minimize, curve_fit
+from mpl_toolkits.mplot3d import Axes3D
 np.set_printoptions(threshold=sys.maxsize)
 np.set_printoptions(formatter={'float': lambda x: "{0:0.3f}".format(x)})
 pd.options.display.float_format = "{:,.2f}".format
@@ -36,9 +38,8 @@ Transition = namedtuple('Transition', ['s', 'a', 'r', 's_'])
 TrainingRecord = namedtuple('TrainingRecord', ['ep', 'reward'])
 # Train Expert AC
 
-train = False
+train = True
 agent = AC.Agent(train)
-
 
 if train == True:
 
@@ -57,6 +58,7 @@ if train == True:
 
 			if ep%50 == 0:
 				env.render()
+				print(state)
 
 			action = agent.select_action(state)
 
@@ -108,17 +110,18 @@ if train == True:
 	ax2.set_ylabel('Episode Length')
 	plt.show()
 	env.close()
-
+exit()
 def divergence(f, h):
 	num_dims = len(f)
 	return np.ufunc.reduce(np.add, [np.gradient(f[i], h[i],axis=i) for i in range(num_dims)])
-
 
 # Redo
 ts = list(T.generate_trajectories(50, env, agent))
 
 states, transitions = T.vector_field(env, ts)
 
+print(states)
+# exit()
 # rbfs_tuples = list(zip(rbfs, vectors))
 raw_tuples = list(zip(states, transitions))
 
@@ -191,10 +194,36 @@ x = states[:,0]
 y = states[:,1]
 print(df['Divergence'])
 v = df['Divergence']
-# v = ( v - v.max())/(v.max()-v.min())
-print(df.loc[df['Divergence'].idxmax()])
-print(v)
-# xx, yy = np.meshgrid(x,y, sparse=True)
+
+def func(data, a, b, c):
+    x = data[0]
+    y = data[1]
+    return a * (x**b) * (y**c)
+
+parameters, covariance = curve_fit(func, [x, y], v)
+model_x_data = np.linspace(min(x), max(x), 30)
+model_y_data = np.linspace(min(y),max(y), 30)
+# create coordinate arrays for vectorized evaluations
+X, Y = np.meshgrid(model_x_data, model_y_data)
+# calculate Z coordinate array
+# print(np.array([X,Y]).shape)
+
+# exit()
+Z = func(np.array([X, Y]), *parameters)
+fig = plt.figure()
+# setup 3d object
+ax = Axes3D(fig)
+# plot surface
+ax.plot_surface(X, Y, Z)
+# plot input data
+ax.scatter(x, y, v, color='red')
+# set plot descriptions
+ax.set_xlabel('X data')
+ax.set_ylabel('Y data')
+ax.set_zlabel('Z data')
+
+plt.show()
+exit()
 
 rows = 1
 cols = 1

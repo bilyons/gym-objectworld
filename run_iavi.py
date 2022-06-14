@@ -68,19 +68,22 @@ for i in range(5):
 		trajectories = ts[:num_t[t]]
 
 		t_alternate = T.convert_trajectory_style(trajectories)
+		t_0 = time.time()
 		action_probabilities = np.zeros((n_states, n_actions))
 		for traj in t_alternate:
 			for (s, a, ns) in traj:
 				action_probabilities[s][a] += 1
 		action_probabilities[action_probabilities.sum(axis=1)==0] = 1e-5
 		action_probabilities/=action_probabilities.sum(axis=1).reshape(n_states,1)
+		t_1 = time.time()
+		a_p_time = t_1-t_0
 		
 		# IAVI Loop
 		start = time.time()
 		q, r, boltz = iavi.inverse_action_value_iteration(n_states, n_actions, gamma, transition_matrix, action_probabilities, epochs=100, theta=0.01)
 		end = time.time()
 
-		t_iavi = end - start
+		t_iavi = end - start + a_p_time
 		# Evaluate IAVI
 		v_iavi = V.policy_eval(boltz, ground_r, env, np.int(size**2), 5, gamma)
 		v_q_iavi = np.mean(q, axis= 1)
@@ -96,21 +99,25 @@ for i in range(5):
 		im = plt.pcolormesh(x, y, v_iavi.reshape((size,size)), shading='nearest', cmap=plt.cm.get_cmap('coolwarm'))
 		divider = make_axes_locatable(ax)
 		cax = divider.append_axes("right", size="5%", pad=0.05)
-		cbar = plt.colorbar(im, cax = cax)
 
-		plt.savefig(os.path.abspath(os.getcwd())+"/img/ow_img/{}/iavi_value_after_{}_trajectories.png".format(i, len(trajectories)))
+		plt.savefig(os.path.abspath(os.getcwd())+"/img/ow_img/{}/iavi_value_after_{}_trajectories.svg".format(i, len(trajectories)))
 		plt.clf()
 
 		ax = plt.subplot(111,aspect='equal',title='True IAVI Value Function')
 		im = plt.pcolormesh(x, y, v_q_iavi.reshape((size,size)), shading='nearest', cmap=plt.cm.get_cmap('coolwarm'))
 		divider = make_axes_locatable(ax)
 		cax = divider.append_axes("right", size="5%", pad=0.05)
-		cbar = plt.colorbar(im, cax = cax)
 
-		plt.savefig(os.path.abspath(os.getcwd())+"/img/ow_img/{}/true_iavi_value_after_{}_trajectories.png".format(i, len(trajectories)))
+		plt.savefig(os.path.abspath(os.getcwd())+"/img/ow_img/{}/true_iavi_value_after_{}_trajectories.svg".format(i, len(trajectories)))
 		plt.clf()
 
 		df.loc[ t ] = [ num_t[t], np.square(v_true - v_iavi).mean(), pr_iavi, pr_q_iavi, pr_r_iavi, t_iavi]
+
+		np.save(f'iavi_value_trajectory_{len(trajectories)}.npy', v_iavi)
+		np.save(f'iavi_pr_trajectory_{len(trajectories)}.npy', pr_iavi)
+		np.save(f'iavi_truepr_trajectory_{len(trajectories)}.npy', pr_q_iavi)
+		np.save(f'iavi_runtime_trajectory_{len(trajectories)}.npy', t_iavi)
+		np.save(f'iavi_reward_trajectory_{len(trajectories)}.npy', r)
 
 	df.to_csv(os.path.abspath(os.getcwd())+'/data/{}/iavi.csv'.format(i), index=False)
 	del [df]

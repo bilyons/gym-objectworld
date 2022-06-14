@@ -56,7 +56,7 @@ def divergence(f, h):
 
 # for i in range(5):
 
-i = 0
+i = 4
 df = pd.DataFrame(columns=["Number of Trajectories", "EVD IQL", "PR IQL", "PR True IQL", "PR Reward IQL", "Runtime IQL"])
 
 # Load trajectories
@@ -70,11 +70,14 @@ for t in range(len(num_t)):
 
 	action_probabilities = np.zeros((n_states, n_actions))
 	t_alternate = T.convert_trajectory_style(trajectories)
+	t_0 = time.time()
 	for traj in t_alternate:
 		for (s, a, ns) in traj:
 			action_probabilities[s][a] += 1
 	action_probabilities[action_probabilities.sum(axis=1)==0] = 1e-5
 	action_probabilities/=action_probabilities.sum(axis=1).reshape(n_states,1)
+	t_1 = time.time()
+	a_p_time = t_1-t_0
 	
 	# IQL Loop
 	start = time.time()
@@ -86,7 +89,7 @@ for t in range(len(num_t)):
 	# exit()
 	end = time.time()
 
-	t_iql = end - start
+	t_iql = end - start + a_p_time
 	# Evaluate IQL
 	v_iql = V.policy_eval(boltz, ground_r, env, np.int(size**2), 5, gamma)
 	v_q_iql = np.mean(q, axis= 1)
@@ -102,21 +105,26 @@ for t in range(len(num_t)):
 	im = plt.pcolormesh(x, y, v_iql.reshape((size,size)), shading='nearest', cmap=plt.cm.get_cmap('coolwarm'))
 	divider = make_axes_locatable(ax)
 	cax = divider.append_axes("right", size="5%", pad=0.05)
-	cbar = plt.colorbar(im, cax = cax)
 
-	plt.savefig(os.path.abspath(os.getcwd())+"/img/ow_img/{}/iql_value_after_{}_trajectories.png".format(i, len(trajectories)))
+	plt.savefig(os.path.abspath(os.getcwd())+"/img/ow_img/{}/iql_value_after_{}_trajectories.svg".format(i, len(trajectories)))
 	plt.clf()
 
 	ax = plt.subplot(111,aspect='equal',title='True IQL Value Function')
 	im = plt.pcolormesh(x, y, v_q_iql.reshape((size,size)), shading='nearest', cmap=plt.cm.get_cmap('coolwarm'))
 	divider = make_axes_locatable(ax)
 	cax = divider.append_axes("right", size="5%", pad=0.05)
-	cbar = plt.colorbar(im, cax = cax)
 
-	plt.savefig(os.path.abspath(os.getcwd())+"/img/ow_img/{}/true_iql_value_after_{}_trajectories.png".format(i, len(trajectories)))
+	plt.savefig(os.path.abspath(os.getcwd())+"/img/ow_img/{}/true_iql_value_after_{}_trajectories.svg".format(i, len(trajectories)))
 	plt.clf()
 
 	df.loc[ t ] = [ num_t[t], np.square(v_true - v_iql).mean(), pr_iql, pr_q_iql, pr_r_iql, t_iql]
+
+	np.save(f'iql_value_trajectory_{len(trajectories)}.npy', v_iql)
+	np.save(f'iql_pr_trajectory_{len(trajectories)}.npy', pr_iql)
+	np.save(f'iql_truepr_trajectory_{len(trajectories)}.npy', pr_q_iql)
+	np.save(f'iql_runtime_trajectory_{len(trajectories)}.npy', t_iql)
+	np.save(f'iql_reward_trajectory_{len(trajectories)}.npy', r)
+
 
 df.to_csv(os.path.abspath(os.getcwd())+'/data/{}/iql.csv'.format(i), index=False)
 del [df]

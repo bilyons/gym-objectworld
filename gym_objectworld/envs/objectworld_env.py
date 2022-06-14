@@ -51,7 +51,7 @@ class ObjectWorldEnv(MiniGridEnv):
         else:
             self.place_agent()
 
-        self.mission = "get to the green goal square"
+        self.mission = ""
 
     def _reward(self, state):
         """

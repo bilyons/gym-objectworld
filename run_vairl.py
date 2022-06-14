@@ -66,73 +66,78 @@ def divergence(f, h):
 	return np.ufunc.reduce(np.add, [np.gradient(f[i], h[i],axis=i) for i in range(num_dims)])
 
 for i in range(5):
-	df = pd.DataFrame(columns=["Number of Trajectories", "EVD VAIRL", "PR VAIRL", "PR Reward", "Runtime VAIRL"])
+	df = pd.DataFrame(columns=["Number of Trajectories", "EVD VAIRL", "PR VAIRL", "PR True VAIRL", "PR Reward", "Runtime VAIRL"])
 
 	# Load trajectories
 	file = open(os.path.abspath(os.getcwd())+"/trajectories/t_set_{}".format(i),'rb')
 	ts = pickle.load(file)
 	file.close()
 
-	for t in range(len(num_t)):
+	# for t in range(len(num_t)):
 
-		trajectories = ts[:num_t[t]]
+	trajectories = ts[:2048]
 
-		start = time.time()
-		tot, tot1, tot2 = T.vector_field_objectworld(env, trajectories)
+	start = time.time()
+	tot, tot1, tot2 = T.vector_field_objectworld(env, trajectories)
 
-		# Get outputs of vector field
-		Fx = tot[xx+yy*size, 1]
-		Fy = tot[xx+yy*size, 0]
+	# Get outputs of vector field
+	Fx = tot[xx+yy*size, 1]
+	Fy = tot[xx+yy*size, 0]
 
-		Fx1 = tot1[xx+yy*size, 1]
-		Fy1 = tot1[xx+yy*size, 0]
+	Fx1 = tot1[xx+yy*size, 1]
+	Fy1 = tot1[xx+yy*size, 0]
 
-		Fx2 = tot2[xx+yy*size, 1]
-		Fy2 = tot2[xx+yy*size, 0]
+	Fx2 = tot2[xx+yy*size, 1]
+	Fy2 = tot2[xx+yy*size, 0]
 
-		# Calculate divergence
-		F= [Fx2, Fy2]
-		g = divergence(F, h)
-		end = time.time()
-		# End VAIRL loop
+	# Calculate divergence
+	F= [Fx2, Fy2]
+	g = divergence(F, h)
+	end = time.time()
+	# End VAIRL loop
 
-		# Evaluate VAIRL
-		div = g.ravel()
-		# Calculate value based on this reward
-		norm_val, _ = V.value_iteration(env, div, gamma)
-		# Calculate policy as if the reward you have is true
-		learned_pol = V.find_policy(env, div, gamma)
-		# Compare
-		v_learned = V.policy_eval(learned_pol, ground_r, env, np.int(size**2), 5, gamma)
-		# Time Check
-		t_vairl = end-start
-		# Correlation check
-		pr_vairl = np.corrcoef(value_func, norm_val)[0,1]
-		pr_vairl_reward = np.corrcoef(div, ground_r)[0,1]
-		print(f"VAIRL Complete {t_vairl}")
-		print(f"EVD VAIRL: {np.square(v_true - v_learned).mean()} PR: VAIRL: {pr_vairl}")
+	# Evaluate VAIRL
+	div = g.ravel()
+	# Calculate value based on this reward
+	norm_val, _ = V.value_iteration(env, div, gamma)
+	# Calculate policy as if the reward you have is true
+	learned_pol = V.find_policy(env, div, gamma)
+	# Compare
+	v_learned = V.policy_eval(learned_pol, ground_r, env, np.int(size**2), 5, gamma)
+	# Time Check
+	t_vairl = end-start
+	# Correlation check
+	pr_vairl = np.corrcoef(value_func, v_learned)[0,1]
+	pr_true_vairl = np.corrcoef(v_true, norm_val)[0,1]
+	pr_vairl_reward = np.corrcoef(div, ground_r)[0,1]
+	print(f"VAIRL Complete {t_vairl}")
+	print(f"EVD VAIRL: {np.square(v_true - v_learned).mean()} PR: VAIRL: {pr_vairl}")
 
-		# Plot Normalized divergence
-		ax = plt.subplot(111,aspect='equal',title='Divergence Value Function')
-		im = plt.pcolormesh(x, y, norm_val.reshape((size,size)), shading='nearest', cmap=plt.cm.get_cmap('coolwarm'))
-		divider = make_axes_locatable(ax)
-		plt.quiver(x,y,Fx2,Fy2)
-		cax = divider.append_axes("right", size="5%", pad=0.05)
-		cbar = plt.colorbar(im, cax = cax)
+	# Plot Normalized divergence
+	ax = plt.subplot(111,aspect='equal',title='Divergence Value Function')
+	im = plt.pcolormesh(x, y, norm_val.reshape((size,size)), shading='nearest', cmap=plt.cm.get_cmap('coolwarm'))
+	divider = make_axes_locatable(ax)
+	plt.quiver(x,y,Fx2,Fy2)
+	cax = divider.append_axes("right", size="5%", pad=0.05)
 
-		plt.savefig(os.path.abspath(os.getcwd())+"/img/ow_img/{}/quiver_div_value_after_{}_trajectories.png".format(i, len(trajectories)))
-		plt.clf()
+	plt.savefig(os.path.abspath(os.getcwd())+"/img/ow_img/{}/quiver_div_value_after_{}_trajectories.svg".format(i, len(trajectories)))
+	plt.clf()
 
-		ax = plt.subplot(111,aspect='equal',title='Divergence Value Function')
-		im = plt.pcolormesh(x, y, norm_val.reshape((size,size)), shading='nearest', cmap=plt.cm.get_cmap('coolwarm'))
-		divider = make_axes_locatable(ax)
-		cax = divider.append_axes("right", size="5%", pad=0.05)
-		cbar = plt.colorbar(im, cax = cax)
+	ax = plt.subplot(111,aspect='equal',title='Divergence Value Function')
+	im = plt.pcolormesh(x, y, norm_val.reshape((size,size)), shading='nearest', cmap=plt.cm.get_cmap('coolwarm'))
+	divider = make_axes_locatable(ax)
+	cax = divider.append_axes("right", size="5%", pad=0.05)
 
-		plt.savefig(os.path.abspath(os.getcwd())+"/img/ow_img/{}/div_value_after_{}_trajectories.png".format(i, len(trajectories)))
-		plt.clf()
+	plt.savefig(os.path.abspath(os.getcwd())+"/img/ow_img/{}/div_value_after_{}_trajectories.svg".format(i, len(trajectories)))
+	plt.clf()
 
-		df.loc[ t ] = [ num_t[t], np.square(v_true - v_learned).mean(), pr_vairl, pr_vairl_reward, t_vairl]
+	df.loc[ t ] = [ num_t[t], np.square(v_true - v_learned).mean(), pr_vairl, pr_true_vairl, pr_vairl_reward, t_vairl]
 
-	df.to_csv(os.path.abspath(os.getcwd())+'/data/{}/vairl.csv'.format(i), index=False)
-	del [df]
+	np.save(f'vairl_value_trajectory_{len(trajectories)}.npy', v_learned)
+	np.save(f'vairl_pr_trajectory_{len(trajectories)}.npy', pr_vairl)
+	np.save(f'vairl_truepr_trajectory_{len(trajectories)}.npy', pr_true_vairl)
+	np.save(f'vairl_runtime_trajectory_{len(trajectories)}.npy', t_vairl)
+
+
+# df.to_csv(os.path.abspath(os.getcwd())+'/data/{}/vairl.csv'.format(i), index=False)
+# del [df]

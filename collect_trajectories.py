@@ -16,6 +16,7 @@ from gym_objectworld.utilities import discrete as D
 from gym_objectworld.solvers import iavi
 from gym_objectworld.solvers import iql
 from gym_objectworld.solvers import maxent
+from gym_objectworld import window as W
 import time
 import pandas as pd
 import pickle
@@ -35,9 +36,27 @@ filehandler = open(os.path.abspath(os.getcwd())+"/trajectories/env.pkl", "wb")
 pickle.dump(env, filehandler)
 filehandler.close()
 
-num_t = 1024
+num_t = 1
 
 ground_r = np.array([env._reward((y_i, x_i)) for (y_i, x_i) in product(range(1, env.grid_size-1), range(1, env.grid_size-1))])
+
+img = env.grid.render(
+	32,
+	env.agent_pos
+)
+
+env.window = W.Window('gym-objectworld')
+env.window.show_img(img)
+time.sleep(1)
+
+ax = plt.subplot(111,aspect='equal',title='True Reward Function')
+im = plt.imshow(ground_r.reshape((size,size)), origin='lower', cmap=plt.cm.get_cmap('coolwarm'))
+divider = make_axes_locatable(ax)
+cax = divider.append_axes("right", size="5%", pad=0.05)
+cbar = plt.colorbar(im, cax = cax)
+plt.show()
+
+exit()
 
 print("World and reward made")
 
